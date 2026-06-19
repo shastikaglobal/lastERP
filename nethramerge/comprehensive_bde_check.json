@@ -1,0 +1,98 @@
+{
+  "bdeRoles": [
+    {
+      "id": "7429ad12-a8fd-4643-86d9-d4948812fb74",
+      "name": "BDE",
+      "slug": "bde"
+    }
+  ],
+  "userRolesCount": 6,
+  "linkedProfiles": [
+    {
+      "id": "d7c9e4b7-d6db-45ce-aa54-ce0f1a494daa",
+      "full_name": "sathpreethika",
+      "status": "approved",
+      "role": null,
+      "requested_role": "bde"
+    },
+    {
+      "id": "e08aaf46-3ecd-4d88-a5a0-98915fcb394b",
+      "full_name": "shastikaglobal 11",
+      "status": "approved",
+      "role": null,
+      "requested_role": "bde"
+    },
+    {
+      "id": "1a3e64ac-d5b2-47d2-9a36-fdfcfd483c11",
+      "full_name": "JAYASRI S",
+      "status": "approved",
+      "role": null,
+      "requested_role": "bde"
+    },
+    {
+      "id": "f3c638cf-b8b4-41ea-92a7-bf3acbeb819d",
+      "full_name": "Nethra Sree",
+      "status": "approved",
+      "role": null,
+      "requested_role": "bde"
+    },
+    {
+      "id": "700d7c5e-a48c-45b3-a585-b25ae230e598",
+      "full_name": "Gayathri",
+      "status": "approved",
+      "role": "bde",
+      "requested_role": "bde"
+    },
+    {
+      "id": "1d1894f1-baa1-4df1-b52d-67faaca45f61",
+      "full_name": "Vemula Navya lahari",
+      "status": "approved",
+      "role": "bde",
+      "requested_role": "bde"
+    }
+  ],
+  "columnProfiles": [
+    {
+      "id": "d7c9e4b7-d6db-45ce-aa54-ce0f1a494daa",
+      "full_name": "sathpreethika",
+      "status": "approved",
+      "role": null,
+      "requested_role": "bde"
+    },
+    {
+      "id": "e08aaf46-3ecd-4d88-a5a0-98915fcb394b",
+      "full_name": "shastikaglobal 11",
+      "status": "approved",
+      "role": null,
+      "requested_role": "bde"
+    },
+    {
+      "id": "1a3e64ac-d5b2-47d2-9a36-fdfcfd483c11",
+      "full_name": "JAYASRI S",
+      "status": "approved",
+      "role": null,
+      "requested_role": "bde"
+    },
+    {
+      "id": "f3c638cf-b8b4-41ea-92a7-bf3acbeb819d",
+      "full_name": "Nethra Sree",
+      "status": "approved",
+      "role": null,
+      "requested_role": "bde"
+    },
+    {
+      "id": "700d7c5e-a48c-45b3-a585-b25ae230e598",
+      "full_name": "Gayathri",
+      "status": "approved",
+      "role": "bde",
+      "requested_role": "bde"
+    },
+    {
+      "id": "1d1894f1-baa1-4df1-b52d-67faaca45f61",
+      "full_name": "Vemula Navya lahari",
+      "status": "approved",
+      "role": "bde",
+      "requested_role": "bde"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+[
+  "id",
+  "company_id",
+  "sku",
+  "name",
+  "category",
+  "hs_code",
+  "unit",
+  "default_grade",
+  "description",
+  "is_active",
+  "created_at",
+  "updated_at",
+  "is_deleted",
+  "deleted_at",
+  "deleted_by"
+]

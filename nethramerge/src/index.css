@@ -1,0 +1,444 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ExportOS ERP Design System - Modern minimal SaaS (Linear/Notion-like) */
+
+/* Shastika Global Impex — Dark + Gold ERP design system
+   Page bg #141414 · Sidebar/Topbar #1c1c1c · Cards #222 · Hover #2a2a2a
+   Inputs #333 · Borders #303030 · Gold #c9961a / #e0b040 / #f2cc78 */
+
+@layer base {
+  :root {
+    /* Light Theme Surfaces */
+    --background: 0 0% 98%;            /* #fafafa page */
+    --foreground: 0 0% 9%;             /* #171717 primary text */
+
+    --card: 0 0% 100%;                 /* #ffffff cards */
+    --card-foreground: 0 0% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+
+    /* Brand: gold - Premium Luster */
+    --primary: 43 96% 45%;            /* Slightly darker gold for light mode contrast */
+    --primary-foreground: 0 0% 100%;  /* White on gold */
+    --primary-muted: 43 96% 40%;      
+    --primary-glow: 45 100% 60%;      
+    --primary-light: 48 100% 85%;     
+
+    --secondary: 0 0% 94%;            /* #f0f0f0 hover surface */
+    --secondary-foreground: 0 0% 9%;
+
+    --muted: 0 0% 94%;                /* #f0f0f0 input/tag bg */
+    --muted-foreground: 0 0% 40%;     /* #666666 secondary text */
+
+    --accent: 39 78% 45%;             /* gold accent */
+    --accent-foreground: 0 0% 100%;   /* white text */
+
+    --destructive: 0 84% 60%;         
+    --destructive-foreground: 0 0% 98%;
+
+    --success: 152 60% 40%;           
+    --success-foreground: 0 0% 98%;
+    --success-muted: 152 60% 90%;
+
+    --warning: 39 90% 50%;            
+    --warning-foreground: 0 0% 9%;
+    --warning-muted: 39 90% 90%;
+
+    --info: 213 90% 50%;              
+    --info-foreground: 0 0% 98%;
+    --info-muted: 213 90% 90%;
+
+    --border: 0 0% 90%;               /* #e5e5e5 */
+    --input: 0 0% 90%;                /* #e5e5e5 */
+    --ring: 39 78% 45%;
+
+    --radius: 0.625rem;
+
+    /* Sidebar / Topbar shell (Light mode variant) */
+    --sidebar-background: 0 0% 100%;   
+    --sidebar-foreground: 0 0% 40%;
+    --sidebar-primary: 39 70% 50%;    
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 94%;       
+    --sidebar-accent-foreground: 0 0% 9%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 39 78% 45%;
+    --sidebar-muted: 0 0% 60%;
+
+    /* Charts */
+    --chart-1: 39 78% 45%;
+    --chart-2: 152 39% 48%;
+    --chart-3: 39 82% 71%;
+    --chart-4: 213 63% 58%;
+    --chart-5: 0 67% 62%;
+
+    /* Brand gradients & elevation */
+    --gradient-gold: linear-gradient(135deg, #FFD700 0%, #B8860B 100%);
+    --gradient-gold-bar: linear-gradient(90deg, #B8860B, #FFD700);
+    --gradient-logo: linear-gradient(135deg, #FFD700, #996515);
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
+    --shadow-md: 0 4px 12px -2px hsl(0 0% 0% / 0.1);
+    --shadow-gold: 0 10px 30px -10px rgba(212, 175, 55, 0.3);
+  }
+
+  /* Force dark by default; .dark mirrors :root for component libs that toggle it */
+  .dark {
+    /* Surfaces */
+    --background: 0 0% 8%;            /* #141414 page */
+    --foreground: 0 0% 94%;           /* #f0f0f0 primary text */
+
+    --card: 0 0% 13%;                 /* #222222 cards */
+    --card-foreground: 0 0% 94%;
+
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 94%;
+
+    /* Brand: gold - Premium Luster */
+    --primary: 43 96% 58%;            /* Vibrant gold */
+    --primary-foreground: 0 0% 0%;    /* Pure black for max contrast on gold */
+    --primary-muted: 43 96% 58%;      
+    --primary-glow: 45 100% 70%;      
+    --primary-light: 48 100% 85%;     
+
+    --secondary: 0 0% 17%;            /* #2a2a2a hover surface */
+    --secondary-foreground: 0 0% 94%;
+
+    --muted: 0 0% 20%;                /* #333333 input/tag bg */
+    --muted-foreground: 0 0% 60%;     /* #9a9a9a secondary text */
+
+    --accent: 39 78% 45%;             /* gold accent (use /10 for tint) */
+    --accent-foreground: 0 0% 0%;     /* black for contrast on gold */
+
+    --destructive: 0 67% 62%;         /* #e05c5c */
+    --destructive-foreground: 0 0% 98%;
+
+    --success: 152 39% 48%;           /* #4caf7d */
+    --success-foreground: 0 0% 98%;
+    --success-muted: 152 39% 18%;
+
+    --warning: 39 78% 45%;            /* gold doubles as warning */
+    --warning-foreground: 0 0% 8%;
+    --warning-muted: 39 60% 18%;
+
+    --info: 213 63% 58%;              /* #5090d9 */
+    --info-foreground: 0 0% 98%;
+    --info-muted: 213 50% 20%;
+
+    --border: 0 0% 19%;               /* #303030 */
+    --input: 0 0% 20%;                /* #333333 */
+    --ring: 39 78% 45%;
+
+    --radius: 0.625rem;
+
+    /* Sidebar / Topbar shell */
+    --sidebar-background: 0 0% 11%;   /* #1c1c1c */
+    --sidebar-foreground: 0 0% 80%;
+    --sidebar-primary: 39 70% 57%;    /* #e0b040 active text */
+    --sidebar-primary-foreground: 0 0% 8%;
+    --sidebar-accent: 0 0% 17%;       /* hover #2a2a2a */
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 19%;
+    --sidebar-ring: 39 78% 45%;
+    --sidebar-muted: 0 0% 50%;
+
+    /* Charts on dark */
+    --chart-1: 39 78% 45%;
+    --chart-2: 152 39% 48%;
+    --chart-3: 39 82% 71%;
+    --chart-4: 213 63% 58%;
+    --chart-5: 0 67% 62%;
+
+    /* Brand gradients & elevation */
+    --gradient-gold: linear-gradient(135deg, #FFD700 0%, #B8860B 100%);
+    --gradient-gold-bar: linear-gradient(90deg, #B8860B, #FFD700);
+    --gradient-logo: linear-gradient(135deg, #FFD700, #996515);
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.4);
+    --shadow-md: 0 4px 12px -2px hsl(0 0% 0% / 0.5);
+    --shadow-gold: 0 10px 30px -10px rgba(212, 175, 55, 0.5);
+  }
+}
+
+@layer base {
+  html { color-scheme: dark; }
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  h1, h2, h3, h4 { @apply tracking-tight; }
+
+  /* Inputs/selects/textareas always use the dark muted surface */
+  input, textarea, select {
+    background-color: hsl(var(--input));
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer components {
+  .erp-card {
+    @apply bg-card/50 backdrop-blur-md border border-white/5 rounded-xl;
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+  }
+  .erp-card-hover { 
+    @apply hover:-translate-y-1 hover:border-primary/30 transition-all duration-300; 
+  }
+  .erp-card-hover:hover {
+    box-shadow: var(--shadow-gold);
+  }
+
+  .glass-panel {
+    @apply bg-background/40 backdrop-blur-xl border border-white/5 rounded-2xl;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  }
+
+  .text-gradient-gold {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Gold primary button: High-end premium finish */
+  .btn-gold {
+    background: var(--gradient-gold);
+    color: hsl(var(--primary-foreground));
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: var(--shadow-gold);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-gold::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    transition: 0.5s;
+  }
+  .btn-gold:hover::before {
+    left: 100%;
+  }
+  .btn-gold:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+    box-shadow: 0 15px 35px -10px rgba(212, 175, 55, 0.6);
+  }
+  .btn-gold:active {
+    transform: translateY(0);
+  }
+
+  /* Active sidebar item: gold tint + left border */
+  .nav-active {
+    background-color: hsl(var(--primary) / 0.10);
+    border-left: 3px solid hsl(var(--primary));
+    color: hsl(var(--primary-glow));
+  }
+
+  /* Decorative gold gradient bar (progress / dividers) */
+  .gold-bar { background: var(--gradient-gold-bar); }
+
+  /* Logo mark */
+  .logo-mark { background: var(--gradient-logo); }
+
+  /* Custom Quill Overrides for Dark Mode */
+  .ql-toolbar.ql-snow {
+    @apply border-border bg-card rounded-t-xl;
+    border-bottom: 0;
+  }
+  .ql-container.ql-snow {
+    @apply border-border bg-muted/30 rounded-b-xl min-h-[200px] text-base;
+  }
+  .ql-editor {
+    @apply text-foreground;
+  }
+  .ql-snow .ql-stroke {
+    @apply stroke-muted-foreground;
+  }
+  .ql-snow .ql-fill {
+    @apply fill-muted-foreground;
+  }
+  .ql-snow .ql-picker {
+    @apply text-muted-foreground;
+  }
+  .ql-snow.ql-toolbar button:hover .ql-stroke,
+  .ql-snow.ql-toolbar button.ql-active .ql-stroke {
+    @apply stroke-primary;
+  }
+  .ql-snow.ql-toolbar button:hover .ql-fill,
+  .ql-snow.ql-toolbar button.ql-active .ql-fill {
+    @apply fill-primary;
+  }
+
+  /* --- Cute & Friendly Animations --- */
+  @keyframes pop-wiggle {
+    0% { transform: scale(1); }
+    20% { transform: scale(1.3) rotate(-15deg); }
+    40% { transform: scale(1.3) rotate(15deg); }
+    60% { transform: scale(1.3) rotate(-10deg); }
+    80% { transform: scale(1.3) rotate(10deg); }
+    100% { transform: scale(1.2) rotate(0deg); }
+  }
+
+  @keyframes bubbly-enter {
+    0% { opacity: 0; transform: translateY(40px) scale(0.8); }
+    50% { opacity: 1; transform: translateY(-20px) scale(1.05); }
+    75% { transform: translateY(10px) scale(0.98); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .animate-bubbly {
+    animation: bubbly-enter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .cute-card {
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border-radius: 2rem; /* extremely soft corners */
+    background: #2a211c; /* warm, chocolatey dark background */
+    position: relative;
+    overflow: hidden;
+    border: 3px solid rgba(251, 191, 36, 0.15);
+  }
+
+  .cute-card:hover {
+    transform: translateY(-15px) scale(1.03);
+    box-shadow: 0 30px 40px -10px rgba(251, 191, 36, 0.35), 0 15px 20px -10px rgba(251, 191, 36, 0.5);
+    border-color: rgba(251, 191, 36, 0.8);
+  }
+
+  .avatar-cute {
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .cute-card:hover .avatar-cute {
+    animation: pop-wiggle 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  /* Flora & Fauna */
+  @keyframes fly-butterfly {
+    0% { transform: translate(0, 0) rotate(-15deg) scale(0.9); }
+    50% { transform: translate(12px, -15px) rotate(10deg) scale(1.1); }
+    100% { transform: translate(0, 0) rotate(-15deg) scale(0.9); }
+  }
+  @keyframes spin-slow {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.1); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+
+  .cute-card .flower-decor {
+    position: absolute;
+    opacity: 1;
+    pointer-events: none;
+    z-index: 50;
+  }
+  .cute-card:hover .flower-decor {
+    animation: spin-slow 6s linear infinite;
+  }
+
+  .cute-card .butterfly-decor {
+    position: absolute;
+    opacity: 1;
+    pointer-events: none;
+    z-index: 50;
+  }
+  .cute-card:hover .butterfly-decor {
+    animation: fly-butterfly 2.5s ease-in-out infinite;
+  }
+
+  /* Fly across screen when clicked */
+  @keyframes fly-across {
+    0% { transform: translate(-100px, 100px) rotate(30deg) scale(0.5); opacity: 0; }
+    15% { opacity: 1; transform: translate(10vw, -10vh) rotate(-10deg) scale(1); }
+    30% { transform: translate(30vw, -30vh) rotate(20deg) scale(1.5); }
+    50% { transform: translate(50vw, -50vh) rotate(-15deg) scale(2); }
+    70% { transform: translate(70vw, -70vh) rotate(15deg) scale(2.5); }
+    85% { opacity: 1; transform: translate(90vw, -90vh) rotate(-10deg) scale(3); }
+    100% { transform: translate(110vw, -110vh) rotate(20deg) scale(3.5); opacity: 0; }
+  }
+
+  .butterfly-fly-across {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 99999;
+    font-size: 6rem;
+    animation: fly-across 4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+}
+
+/* --- Global Print Media Styles --- */
+@media print {
+  /* Hide sidebars, headers, panels, buttons, and close controllers */
+  aside,
+  header,
+  nav,
+  .no-print,
+  .print\:hidden,
+  #team-chat-panel,
+  .TeamChatPanel,
+  .AIChatPanel,
+  button,
+  .btn,
+  .absolute.-top-14,
+  .absolute.top-4.right-4 {
+    display: none !important;
+  }
+
+  /* Reset outer layout boundaries and background colors */
+  body, html, #root, .min-h-screen, main, .flex-1, .bg-background {
+    background: white !important;
+    background-color: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  /* Format modal wrapper overlays to align perfectly as plain document pages */
+  .fixed.inset-0.z-\[9999\] {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    background-color: white !important;
+    backdrop-filter: none !important;
+    overflow: visible !important;
+    display: block !important;
+    box-shadow: none !important;
+  }
+
+  /* Target and size the printable page wrapper to exactly A4 page parameters */
+  .relative.w-full.max-w-\[210mm\] {
+    max-width: 210mm !important;
+    width: 210mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+

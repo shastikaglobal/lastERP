@@ -1,0 +1,6 @@
+{
+  "code": "23502",
+  "details": "Failing row contains (ac608169-26b5-4417-a32e-afd3410886fc, null, null, Tender Coconut, Coconut, null, kg, null, null, t, 2026-06-12 12:30:05.776157+00, 2026-06-12 12:30:05.776157+00, f, null, null).",
+  "hint": null,
+  "message": "null value in column \"company_id\" of relation \"products\" violates not-null constraint"
+}
