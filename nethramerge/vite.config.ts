@@ -42,6 +42,33 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/jspdf") || id.includes("node_modules/html2canvas")) {
+            return "pdf-export";
+          }
+          if (id.includes("node_modules/xlsx")) {
+            return "xlsx-export";
+          }
+          if (id.includes("node_modules/recharts")) {
+            return "recharts-vendor";
+          }
+          if (id.includes("node_modules/face-api.js")) {
+            return "face-api-vendor";
+          }
+          if (id.includes("node_modules/emoji-picker-react")) {
+            return "emoji-picker";
+          }
+          if (id.includes("node_modules/html5-qrcode")) {
+            return "qrcode-scan";
+          }
+        },
+      },
+    },
+  },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
