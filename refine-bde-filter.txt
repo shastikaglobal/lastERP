@@ -1,0 +1,23 @@
+import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+
+// Read config from .env or similar if available, or just try to get it from the environment
+// But I can't easily import from the TS files in a MJS script without setup.
+// I'll try to find where VITE_SUPABASE_URL is defined.
+
+// Actually, I can just use the command line to run a quick query if I have the URL/Key.
+// Or I can look at the Activities.tsx again and see if there's a logic flaw.
+
+// Wait, I see a possible issue. 
+// In Activities.tsx:
+// 164:         return (isApproved || hasBDERole) && (hasBDERole || isRequestedBDE || isGenericBDE);
+
+// If isApproved is true (which it is for everyone who can log in), then the first part is true.
+// Then it checks if they have BDE role OR requested_role === bde.
+// If someone was a BDE and then became a Manager, they might still have requested_role === bde from when they signed up!
+// Or if they have multiple roles.
+
+// The user says "ONLY users who have the role 'BDE' assigned to them".
+// This implies I should ONLY look at the actual assigned roles in user_roles table.
+
+// Let's refine the filter to be STRICTER as requested.

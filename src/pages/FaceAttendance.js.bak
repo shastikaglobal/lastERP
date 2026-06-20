@@ -1,0 +1,233 @@
+import {
+    getAllFaceEmbeddings,
+    recordCheckIn,
+    recordCheckOut,
+    getTodayAttendance,
+    getTodaySummary,
+} from '../services/supabase';
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const MATCH_THRESHOLD = 0.55;   // Euclidean distance threshold (lower = stricter)
+const MIN_CONFIDENCE = 0.60;   // Minimum confidence to accept a match (0-1)
+const MAX_SAMPLES = 5;      // Max embedding samples stored per employee
+
+// ─── Embedding cache (refresh on mount) ───────────────────────────────────────
+
+let _embeddingCache = null;   // { employeeId: { employee, descriptors[] } }
+let _cacheLoadedAt = null;
+
+/**
+ * Load all face embeddings from Supabase into memory.
+ * Cached for the session; call refreshEmbeddingCache() to force reload.
+ */
+export async function loadEmbeddingCache() {
+    const rows = await getAllFaceEmbeddings();
+
+    const cache = {};
+    for (const row of rows) {
+        const empId = row.employee_id;
+        if (!cache[empId]) {
+            cache[empId] = {
+                employee: row.employees,
+                descriptors: [],
+            };
+        }
+        // Convert JSON array → Float32Array for face-api.js compatibility
+        if (Array.isArray(row.face_embedding)) {
+            cache[empId].descriptors.push(new Float32Array(row.face_embedding));
+        }
+    }
+
+    _embeddingCache = cache;
+    _cacheLoadedAt = Date.now();
+    return cache;
+}
+
+export async function refreshEmbeddingCache() {
+    _embeddingCache = null;
+    return loadEmbeddingCache();
+}
+
+export function getEmbeddingCache() {
+    return _embeddingCache;
+}
+
+// ─── Face Matching ────────────────────────────────────────────────────────────
+
+/**
+ * Euclidean distance between two Float32Arrays.
+ * face-api.js descriptors are 128-dim unit vectors.
+ */
+function euclideanDistance(a, b) {
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) {
+        const diff = a[i] - b[i];
+        sum += diff * diff;
+    }
+    return Math.sqrt(sum);
+}
+
+/**
+ * Find the best matching employee for a given face descriptor.
+ *
+ * @param {Float32Array} queryDescriptor   – descriptor from live scan
+ * @param {Object}       [cache]           – optional pre-loaded cache
+ * @returns {{ employee, distance, confidence, matched: boolean } | null}
+ */
+export function findBestMatch(queryDescriptor, cache = null) {
+    const embeddings = cache || _embeddingCache;
+    if (!embeddings) return null;
+
+    let bestMatch = null;
+    let bestDistance = Infinity;
+
+    for (const [empId, { employee, descriptors }] of Object.entries(embeddings)) {
+        for (const descriptor of descriptors) {
+            const distance = euclideanDistance(queryDescriptor, descriptor);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestMatch = { employee, empId };
+            }
+        }
+    }
+
+    if (!bestMatch) return null;
+
+    // Convert distance to 0-1 confidence (0.0 distance = 1.0 confidence)
+    const confidence = Math.max(0, 1 - bestDistance / MATCH_THRESHOLD);
+    const matched = bestDistance < MATCH_THRESHOLD && confidence >= MIN_CONFIDENCE;
+
+    return {
+        employee: bestMatch.employee,
+        employeeId: bestMatch.empId,
+        distance: bestDistance,
+        confidence: parseFloat(confidence.toFixed(4)),
+        matched,
+    };
+}
+
+// ─── Attendance Actions ───────────────────────────────────────────────────────
+
+/**
+ * Handle a successful face scan:
+ * - Check if employee already checked in today
+ * - If not → check in
+ * - If yes and no check-out → check out
+ *
+ * @param {string} employeeId
+ * @param {number} confidence  – 0-1
+ * @returns {Promise<{ action: 'check_in'|'check_out'|'already_complete', record, employee }>}
+ */
+export async function handleAttendanceScan(employeeId, confidence) {
+    const existing = await getTodayAttendance(employeeId);
+
+    if (!existing) {
+        // First scan today → check in
+        const record = await recordCheckIn(employeeId, confidence);
+        return { action: 'check_in', record };
+    }
+
+    if (existing.check_in && !existing.check_out) {
+        // Already checked in → check out
+        const record = await recordCheckOut(employeeId);
+        return { action: 'check_out', record };
+    }
+
+    // Both check-in and check-out done
+    return { action: 'already_complete', record: existing };
+}
+
+/**
+ * Full scan pipeline — called by FaceAttendance.tsx after face detection.
+ *
+ * @param {Float32Array} descriptor   – from faceEngine.js
+ * @param {boolean}      livenessOk   – from liveness check
+ * @returns {Promise<ScanResult>}
+ *
+ * @typedef {Object} ScanResult
+ * @property {'matched'|'no_match'|'spoof'|'error'} status
+ * @property {string}  message        – display message
+ * @property {Object}  [employee]     – matched employee data
+ * @property {number}  [confidence]   – 0-1
+ * @property {string}  [action]       – 'check_in' | 'check_out' | 'already_complete'
+ */
+export async function processScan(descriptor, livenessOk) {
+    try {
+        // 1. Liveness check
+        if (!livenessOk) {
+            return {
+                status: 'spoof',
+                message: 'Liveness check failed. Please try again.',
+            };
+        }
+
+        // 2. Load cache if needed
+        if (!_embeddingCache) {
+            await loadEmbeddingCache();
+        }
+
+        // 3. Match face
+        const match = findBestMatch(descriptor);
+
+        if (!match || !match.matched) {
+            return {
+                status: 'no_match',
+                message: 'Face not recognised. Please register or try again.',
+                confidence: match?.confidence ?? 0,
+            };
+        }
+
+        // 4. Mark attendance
+        const { action, record } = await handleAttendanceScan(
+            match.employeeId,
+            match.confidence
+        );
+
+        const messages = {
+            check_in: `Welcome, ${match.employee?.full_name || match.employee?.name}! Checked in.`,
+            check_out: `Goodbye, ${match.employee?.full_name || match.employee?.name}! Checked out.`,
+            already_complete: `${match.employee?.full_name || match.employee?.name} — attendance already complete for today.`,
+        };
+
+        return {
+            status: 'matched',
+            message: messages[action],
+            employee: match.employee,
+            employeeId: match.employeeId,
+            confidence: match.confidence,
+            action,
+            record,
+        };
+
+    } catch (err) {
+        console.error('[FaceAttendance] processScan error:', err);
+        return {
+            status: 'error',
+            message: `Error: ${err.message}`,
+        };
+    }
+}
+
+// ─── Dashboard helpers ────────────────────────────────────────────────────────
+
+/**
+ * Fetch today's attendance summary for admin dashboard.
+ * @returns {Promise<Array>}
+ */
+export async function fetchTodaySummary() {
+    return getTodaySummary();
+}
+
+/**
+ * Get attendance stats from a summary list.
+ * @param {Array} summary  – from fetchTodaySummary()
+ * @returns {{ total, present, absent, late }}
+ */
+export function computeStats(summary = []) {
+    const total = summary.length;
+    const present = summary.filter(r => r.attendance_status === 'present').length;
+    const late = summary.filter(r => r.attendance_status === 'late').length;
+    const absent = summary.filter(r => r.attendance_status === 'absent').length;
+    return { total, present, late, absent };
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "name": "gayathri",
+    "results": [
+      {
+        "id": "700d7c5e-a48c-45b3-a585-b25ae230e598",
+        "full_name": "Gayathri",
+        "status": "approved",
+        "role": "bde",
+        "requested_role": "bde"
+      }
+    ]
+  },
+  {
+    "name": "vemula",
+    "results": [
+      {
+        "id": "1d1894f1-baa1-4df1-b52d-67faaca45f61",
+        "full_name": "Vemula Navya lahari",
+        "status": "approved",
+        "role": "bde",
+        "requested_role": "bde"
+      }
+    ]
+  }
+]

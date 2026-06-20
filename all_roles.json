@@ -1,0 +1,162 @@
+[
+  {
+    "id": "b675a3ec-d55c-4c89-962b-2c38b0b335ee",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "Admin",
+    "slug": "admin",
+    "description": "Full system access",
+    "is_system": true,
+    "created_at": "2026-04-28T10:31:20.814192+00:00",
+    "updated_at": "2026-04-28T10:31:20.814192+00:00"
+  },
+  {
+    "id": "5fab77a9-06b0-463d-b796-d7bc35bf6534",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "Manager",
+    "slug": "manager",
+    "description": "Operations manager",
+    "is_system": true,
+    "created_at": "2026-04-28T10:31:20.814192+00:00",
+    "updated_at": "2026-04-28T10:31:20.814192+00:00"
+  },
+  {
+    "id": "71eec8bd-6b7e-4f40-80b8-62e7d532682e",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "BD",
+    "slug": "bd",
+    "description": "Business Development",
+    "is_system": true,
+    "created_at": "2026-04-28T10:31:20.814192+00:00",
+    "updated_at": "2026-04-28T10:31:20.814192+00:00"
+  },
+  {
+    "id": "13202a76-0d27-4ab6-9804-972c778e41c4",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "Accounts",
+    "slug": "accounts",
+    "description": "Finance & accounting",
+    "is_system": true,
+    "created_at": "2026-04-28T10:31:20.814192+00:00",
+    "updated_at": "2026-04-28T10:31:20.814192+00:00"
+  },
+  {
+    "id": "53f90f6b-b5a4-4f7d-916f-5634c0a26d76",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "Operations",
+    "slug": "operations",
+    "description": "Warehouse & shipment",
+    "is_system": true,
+    "created_at": "2026-04-28T10:31:20.814192+00:00",
+    "updated_at": "2026-04-28T10:31:20.814192+00:00"
+  },
+  {
+    "id": "47e3b671-c4e4-4ba8-9587-a052a061129f",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "QC",
+    "slug": "qc",
+    "description": "Quality control",
+    "is_system": true,
+    "created_at": "2026-04-28T10:31:20.814192+00:00",
+    "updated_at": "2026-04-28T10:31:20.814192+00:00"
+  },
+  {
+    "id": "abed2ab6-6167-46b4-ab81-b55de0524e71",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "Procurement",
+    "slug": "procurement",
+    "description": "Procurement & suppliers",
+    "is_system": true,
+    "created_at": "2026-04-28T10:31:20.814192+00:00",
+    "updated_at": "2026-04-28T10:31:20.814192+00:00"
+  },
+  {
+    "id": "7ad4f26a-2e06-4479-b8bc-54f2d6b1b4e4",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "Data Analyst",
+    "slug": "data_analyst",
+    "description": "Analytics & reports",
+    "is_system": true,
+    "created_at": "2026-04-28T10:31:20.814192+00:00",
+    "updated_at": "2026-04-28T10:31:20.814192+00:00"
+  },
+  {
+    "id": "18fc278f-365c-4d15-b524-8d68884c590f",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "Marketing",
+    "slug": "marketing",
+    "description": "Digital marketing",
+    "is_system": true,
+    "created_at": "2026-04-28T10:31:20.814192+00:00",
+    "updated_at": "2026-04-28T10:31:20.814192+00:00"
+  },
+  {
+    "id": "e9ac0f79-b481-4814-a2dd-c3f15f163830",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "HR",
+    "slug": "hr",
+    "description": "Human resources",
+    "is_system": true,
+    "created_at": "2026-04-28T10:31:20.814192+00:00",
+    "updated_at": "2026-04-28T10:31:20.814192+00:00"
+  },
+  {
+    "id": "df45744a-8487-49e8-9ac3-c8dd9bb328e3",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "Employee",
+    "slug": "employee",
+    "description": null,
+    "is_system": false,
+    "created_at": "2026-04-30T08:57:30.186119+00:00",
+    "updated_at": "2026-04-30T08:57:30.186119+00:00"
+  },
+  {
+    "id": "7429ad12-a8fd-4643-86d9-d4948812fb74",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "BDE",
+    "slug": "bde",
+    "description": "Business Development Executive",
+    "is_system": false,
+    "created_at": "2026-05-01T05:05:11.449576+00:00",
+    "updated_at": "2026-05-01T05:05:11.449576+00:00"
+  },
+  {
+    "id": "6cab2a16-19bc-4155-8afe-2dfc4f34ab36",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "Software Dev",
+    "slug": "software_dev",
+    "description": "Software Developer",
+    "is_system": false,
+    "created_at": "2026-05-01T05:05:11.449576+00:00",
+    "updated_at": "2026-05-01T05:05:11.449576+00:00"
+  },
+  {
+    "id": "bd5707bd-8f37-4af7-b0aa-820fc19e3430",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "Net & Security",
+    "slug": "net_security",
+    "description": "Networks and Security",
+    "is_system": false,
+    "created_at": "2026-05-01T05:05:11.449576+00:00",
+    "updated_at": "2026-05-01T05:05:11.449576+00:00"
+  },
+  {
+    "id": "a72420ad-2948-4e54-8d4c-9cd46cc8db66",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "Secretary",
+    "slug": "secretary",
+    "description": "Secretary / Admin Assistant",
+    "is_system": false,
+    "created_at": "2026-05-01T05:05:11.449576+00:00",
+    "updated_at": "2026-05-01T05:05:11.449576+00:00"
+  },
+  {
+    "id": "99078665-ba2b-43a8-858e-7a46c9e6e0aa",
+    "company_id": "00000000-0000-0000-0000-00000000ae01",
+    "name": "Digital Marketing",
+    "slug": "digital_marketing",
+    "description": "Digital Marketing role",
+    "is_system": false,
+    "created_at": "2026-06-01T05:27:41.443701+00:00",
+    "updated_at": "2026-06-01T05:27:41.443701+00:00"
+  }
+]

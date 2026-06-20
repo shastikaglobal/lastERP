@@ -1,0 +1,157 @@
+{
+  "leads": [
+    {
+      "id": "3fd9331d-c1e7-4e73-80b0-d88839cec040",
+      "company_name": "Troplibana",
+      "country": "France",
+      "stage": "Contacted"
+    },
+    {
+      "id": "bee2261b-cf1e-4404-97d3-c8d4a3c1e96c",
+      "company_name": "ALNAMOOS FRESH",
+      "country": "UAE",
+      "stage": "Contacted"
+    },
+    {
+      "id": "842c1478-f60e-41b9-b3ac-e72aac781dae",
+      "company_name": "Althwayyib",
+      "country": "Qatar",
+      "stage": "Contacted"
+    },
+    {
+      "id": "86c25bef-4e62-48a2-849b-acca9e1f2cf1",
+      "company_name": "Hana Dai viet",
+      "country": "Vietnam",
+      "stage": "Contacted"
+    },
+    {
+      "id": "cf463409-9827-4478-9130-0c94264958c3",
+      "company_name": "Transfood ",
+      "country": "Germany",
+      "stage": "Contacted"
+    },
+    {
+      "id": "68d71897-3352-4235-ba3f-cec9dfb8ccd6",
+      "company_name": "Andy Tran Trading",
+      "country": "Vietnam",
+      "stage": "Contacted"
+    },
+    {
+      "id": "2f606ebe-4e90-4132-9665-7a77598ded8f",
+      "company_name": "Green Fusion Sdn Bhd",
+      "country": "Malaysia",
+      "stage": "Contacted"
+    },
+    {
+      "id": "13f1fa13-e545-4d9d-ac79-b457037932d2",
+      "company_name": "Future Wave  trading",
+      "country": "UAE",
+      "stage": "Contacted"
+    },
+    {
+      "id": "f2908cf5-6447-4bae-a4b7-1bfb44d09c1a",
+      "company_name": "Agro Trade for Import & Export",
+      "country": "Egypt",
+      "stage": "Contacted"
+    },
+    {
+      "id": "77086abb-102d-47a7-a24a-59c9ec9f9aac",
+      "company_name": "Mirajkar",
+      "country": "UAE",
+      "stage": "New"
+    },
+    {
+      "id": "4c99238a-bd4f-43e0-a417-5979289bcfb7",
+      "company_name": "Edendale Ltd",
+      "country": "Mauritius",
+      "stage": "New"
+    },
+    {
+      "id": "b69eced8-1122-4a7e-b116-6b778606c3b1",
+      "company_name": "MA FRUITS CONSULTANTS GIDA DEPOLAMA. NAK. ITH VE IHR. LTD STI   ",
+      "country": "Turkey",
+      "stage": "Negotiation"
+    },
+    {
+      "id": "d8548661-c7c5-4590-ba87-ca343ce863be",
+      "company_name": "Hupco Pte Ltd ",
+      "country": "Singapore",
+      "stage": "New"
+    },
+    {
+      "id": "7381828c-5243-4e62-98f6-40d7e864b717",
+      "company_name": "Sea Horse pvt ltd ",
+      "country": "Maldives",
+      "stage": "Contacted"
+    },
+    {
+      "id": "ede439e2-79ec-4deb-8b30-41c7322b3aa3",
+      "company_name": "Al seem trading",
+      "country": "Oman",
+      "stage": "Contacted"
+    },
+    {
+      "id": "5a04dbce-d892-4404-a9f9-1c322619bdcc",
+      "company_name": "YFC Trading (M) Sdn.Bhd",
+      "country": "Malaysia",
+      "stage": "New"
+    },
+    {
+      "id": "2ccfcded-0e2d-4bed-932c-4784043ad2cf",
+      "company_name": "HOA Australia pty.ltd ",
+      "country": "Australia",
+      "stage": "New"
+    },
+    {
+      "id": "75696cd5-56c7-467f-9c04-d57ef4775a69",
+      "company_name": "KWEK SUM CHUAN PTE LTD",
+      "country": "singapore ",
+      "stage": "New"
+    },
+    {
+      "id": "6ed180e3-3d87-4f82-9808-d9072d6b25e6",
+      "company_name": "Kavvadias S.A",
+      "country": "Greece",
+      "stage": "Contacted"
+    },
+    {
+      "id": "edf7e644-7bd5-4cc3-804e-b68f1aaa09d8",
+      "company_name": "Yip Tong & Sons Ltd ",
+      "country": "Mauritius",
+      "stage": "New"
+    },
+    {
+      "id": "941083d7-e219-49dc-b7f3-8c161b78b9aa",
+      "company_name": "Bharat Foods Pty Ltd ",
+      "country": "Australia",
+      "stage": "Contacted"
+    }
+  ],
+  "quotes": [
+    {
+      "id": "86d58064-4af5-4b73-b127-682e921f88cc",
+      "quotation_number": "56789",
+      "amount": 177,
+      "total_amount": 0,
+      "status": "Draft",
+      "lead_id": "4c99238a-bd4f-43e0-a417-5979289bcfb7"
+    },
+    {
+      "id": "675d8a57-d6c7-4ec5-8b62-cca36ecbc36d",
+      "quotation_number": "QT-2026-0001",
+      "amount": 106030.08,
+      "total_amount": 0,
+      "status": "Pending",
+      "lead_id": "6ed180e3-3d87-4f82-9808-d9072d6b25e6"
+    },
+    {
+      "id": "b5061d84-a5f9-45d5-b7f6-065ddf3f50a5",
+      "quotation_number": "2026-04",
+      "amount": 488.99,
+      "total_amount": 0,
+      "status": "Pending",
+      "lead_id": "7381828c-5243-4e62-98f6-40d7e864b717"
+    }
+  ],
+  "activities": []
+}

@@ -1,0 +1,33 @@
+/* crm-security.css */
+.shield-active {
+    position: relative;
+    overflow: hidden;
+}
+
+.privacy-shield {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #000;
+    z-index: 999999;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.shield-active .privacy-shield {
+    display: flex;
+}
+
+.shield-active .crm-protected-content {
+    filter: blur(10px) brightness(0);
+    pointer-events: none;
+    user-select: none;
+}
+
+body.lockdown-active {
+    overflow: hidden;
+}
