@@ -74,6 +74,7 @@ export default function AccountSettings() {
       setDesignation(profile.requested_role || "");
       setDob(profile.dob || "");
       setJoiningDate(profile.joining_date || "");
+      setDepartment(profile.department || "");
     }
     setLoading(false);
   }, [profile, user]);
@@ -147,12 +148,19 @@ export default function AccountSettings() {
         .from('chat-attachments')
         .getPublicUrl(filePath);
 
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', profile.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/employees/${profile.id}`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${session?.access_token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ avatar_url: publicUrl })
+      });
 
-      if (updateError) throw updateError;
+      if (!res.ok) {
+        throw new Error("Failed to update avatar url on backend");
+      }
 
       setAvatarUrl(publicUrl);
       toast.success("Profile picture updated successfully!");
@@ -169,20 +177,33 @@ export default function AccountSettings() {
     const updates = {
       full_name: fullName,
       phone: contactNumber,
-      // We can map designation to requested_role and employee ID to biometric_id for persistence
       requested_role: designation,
       biometric_id: employeeId,
       dob: dob || null,
       joining_date: joiningDate || null,
+      department: department || null,
     };
 
-    const { error } = await supabase.from('profiles').update(updates).eq('id', profile.id);
-    setSaving(false);
-    
-    if (error) {
-      toast.error("Failed to update profile");
-    } else {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/employees/${profile.id}`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${session?.access_token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(updates)
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to update profile on backend");
+      }
+
       toast.success("Profile updated successfully!");
+    } catch (err: any) {
+      toast.error("Failed to update profile: " + err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -211,13 +232,26 @@ export default function AccountSettings() {
   const handleSaveSignature = async () => {
     if (!profile?.id) return;
     setSaving(true);
-    const { error } = await supabase.from('profiles').update({ email_signature: signature }).eq('id', profile.id);
-    setSaving(false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/employees/${profile.id}`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${session?.access_token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email_signature: signature })
+      });
 
-    if (error) {
-      toast.error("Failed to save signature");
-    } else {
+      if (!res.ok) {
+        throw new Error("Failed to save email signature on backend");
+      }
+
       toast.success("Signature saved successfully!");
+    } catch (err: any) {
+      toast.error("Failed to save signature: " + err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -380,21 +414,29 @@ export default function AccountSettings() {
               <h2 className="text-xl font-semibold text-foreground mb-1">Login & Security</h2>
               <p className="text-sm text-muted-foreground mb-6">Manage your password and active sessions.</p>
 
-              <Section title="Change Password" className="mb-8">
-                <div className="grid gap-4 max-w-sm">
-                  <div className="space-y-2">
-                    <Label>New Password</Label>
-                    <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+              {(profile?.email === "shastikaglobal11@gmail.com" || user?.email === "shastikaglobal11@gmail.com") ? (
+                <Section title="Change Password" className="mb-8">
+                  <div className="grid gap-4 max-w-sm">
+                    <div className="space-y-2">
+                      <Label>New Password</Label>
+                      <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Confirm New Password</Label>
+                      <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+                    </div>
+                    <Button onClick={handleUpdatePassword} disabled={saving || !newPassword || !confirmPassword} className="w-full bg-[#2563eb] hover:bg-blue-700">
+                      {saving ? "Updating..." : "Update Password"}
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Confirm New Password</Label>
-                    <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+                </Section>
+              ) : (
+                <Section title="Change Password" className="mb-8">
+                  <div className="p-4 border border-blue-900/30 rounded-lg bg-blue-950/20 text-blue-400 text-sm max-w-md">
+                    🔑 Password changes are restricted. Please contact the administrator (<strong>shastikaglobal11@gmail.com</strong>) to reset your password.
                   </div>
-                  <Button onClick={handleUpdatePassword} disabled={saving || !newPassword || !confirmPassword} className="w-full bg-[#2563eb] hover:bg-blue-700">
-                    {saving ? "Updating..." : "Update Password"}
-                  </Button>
-                </div>
-              </Section>
+                </Section>
+              )}
 
               <Section title="Active Sessions">
                 <div className="border rounded-lg p-4 flex items-center gap-4 bg-muted/50">

@@ -5,26 +5,35 @@ import { Button } from "@/components/ui/button";
 import { Section } from "@/components/shared/FormShell";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 export default function QuotationApprovals() {
+  const { profile } = useAuth();
   const [pending, setPending] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
 
   const fetchPending = async () => {
     try {
-      const { data, error } = await supabase
-        .from("quotations")
-        .select(`
-          *,
-          customers (name)
-        `)
-        .in("status", ["Pending", "In Review"])
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setPending(data || []);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/quotations', {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      });
+      if (!res.ok) throw new Error("Failed to fetch quotations");
+      
+      const data = await res.json();
+      
+      // Filter for "Pending" or "In Review" status and match company_id
+      const pendingQuots = (data || []).filter((q: any) => 
+        ["Pending", "In Review"].includes(q.status) && 
+        q.is_deleted !== true &&
+        (!profile?.company_id || q.company_id === profile.company_id)
+      );
+      
+      setPending(pendingQuots);
     } catch (err: any) {
       console.error("Error fetching pending quotations:", err);
       toast.error("Failed to load pending approvals");
@@ -35,17 +44,24 @@ export default function QuotationApprovals() {
 
   useEffect(() => {
     fetchPending();
-  }, []);
+  }, [profile?.company_id]);
 
   const handleAction = async (id: string, newStatus: "Approved" | "Rejected") => {
     setActionId(id);
     try {
-      const { error } = await supabase
-        .from("quotations")
-        .update({ status: newStatus })
-        .eq("id", id);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/quotations/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({
+          quotation: { status: newStatus }
+        })
+      });
 
-      if (error) throw error;
+      if (!res.ok) throw new Error(await res.text() || `Failed to update quotation to ${newStatus}`);
       
       setPending(prev => prev.filter(q => q.id !== id));
       toast.success(`Quotation ${newStatus.toLowerCase()} successfully`);
@@ -87,7 +103,7 @@ export default function QuotationApprovals() {
                     <div className="min-w-0">
                       <div className="text-sm font-semibold truncate">{q.customers?.name || "Unknown Customer"}</div>
                       <div className="text-xs text-muted-foreground font-mono mt-0.5">
-                        {q.quotation_number} · {q.currency} {Number(q.total_amount || 0).toLocaleString()}
+                        {q.quotation_number} · {q.currency} {Number(q.amount || 0).toLocaleString()}
                       </div>
                     </div>
                   </div>

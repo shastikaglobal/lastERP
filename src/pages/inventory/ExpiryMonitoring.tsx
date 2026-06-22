@@ -90,6 +90,19 @@ export default function ExpiryMonitoring() {
     return Array.from(seen.values()).sort((a: any, b: any) => a.name.localeCompare(b.name));
   }, [products]);
 
+  const { data: warehouses = [] } = useQuery({
+    queryKey: ["warehouses"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/inventory/warehouses', {
+        headers: { 'Authorization': `Bearer ${session?.access_token}` }
+      });
+      if (!res.ok) throw new Error('Failed to fetch warehouses');
+      const data = await res.json();
+      return (data || []).filter((w: any) => !w.is_deleted).sort((a: any, b: any) => a.name.localeCompare(b.name));
+    },
+  });
+
   const mutation = useMutation({
     mutationFn: async (payload: any) => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -516,11 +529,23 @@ export default function ExpiryMonitoring() {
               </div>
               <div className="space-y-2">
                 <Label>Warehouse</Label>
-                <Input
+                <Select
                   value={formState.warehouse}
-                  onChange={(e) => setFormState((prev) => ({ ...prev, warehouse: e.target.value }))}
-                  placeholder="e.g., Main Warehouse"
-                />
+                  onValueChange={(val) => setFormState((prev) => ({ ...prev, warehouse: val }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Warehouse" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {warehouses.length === 0 ? (
+                      <div className="p-3 text-sm text-muted-foreground">No warehouses available</div>
+                    ) : (
+                      warehouses.map((w: any) => (
+                        <SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

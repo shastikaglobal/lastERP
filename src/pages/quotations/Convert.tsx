@@ -54,10 +54,16 @@ export default function ConvertQuotation() {
       const productSummary = quote.items?.map((i: any) => i.products?.name || 'Product').join(", ").substring(0, 100) || 'Export Goods';
       const mainUnit = quote.items?.[0]?.products?.unit || 'kg';
 
-      // 1. Create Order
-      const { data: order, error: orderErr } = await supabase
-        .from('export_orders')
-        .insert({
+      const { data: { session } } = await supabase.auth.getSession();
+
+      // 1. Create Order via VPS API
+      const orderRes = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({
           company_id: profile!.company_id,
           customer_name: quote.customer?.name || 'Unknown',
           customer_country: quote.customer?.country || 'N/A',
@@ -74,13 +80,15 @@ export default function ConvertQuotation() {
           created_by: profile!.id,
           notes: `Converted from Quotation ${quote.quotation_number}`
         })
-        .select('id')
-        .single();
-      
-      if (orderErr) throw orderErr;
+      });
+
+      if (!orderRes.ok) {
+        throw new Error(await orderRes.text() || "Failed to create order on VPS");
+      }
+
+      const order = await orderRes.json();
 
       // 2. Update Quotation Status
-      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(`/api/quotations/${quote.id}`, {
         method: 'PUT',
         headers: {

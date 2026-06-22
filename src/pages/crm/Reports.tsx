@@ -180,7 +180,18 @@ export default function Reports() {
 
   const bdeProfiles = useMemo(() => {
     if (!rawDbData) return [];
-    return rawDbData.profiles.sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+    return rawDbData.profiles
+      .filter((p) => {
+        const name = (p.full_name || "").toLowerCase();
+        return (
+          name.includes("gayathri") ||
+          name.includes("gaythri") ||
+          name.includes("navy") ||
+          name.includes("navya") ||
+          name.includes("aditi")
+        );
+      })
+      .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
   }, [rawDbData]);
 
   // Import syncCounter here (need to import at top of file too, will do in next step)
@@ -285,9 +296,38 @@ export default function Reports() {
     }
   };
 
+  // Helper to check if a profile belongs to BDE (Gayathri, Navya, Aditi)
+  const isProfileBDE = (identifier: any) => {
+    if (!rawDbData || !identifier) return false;
+    const val = String(identifier).trim().toLowerCase();
+    const match = rawDbData.profiles.find(p => 
+      p.id.toLowerCase() === val || 
+      (p.full_name || "").toLowerCase().trim() === val
+    );
+    if (!match) {
+      return (
+        val.includes("gayathri") ||
+        val.includes("gaythri") ||
+        val.includes("navy") ||
+        val.includes("navya") ||
+        val.includes("aditi")
+      );
+    }
+    const name = (match.full_name || "").toLowerCase();
+    return (
+      name.includes("gayathri") ||
+      name.includes("gaythri") ||
+      name.includes("navy") ||
+      name.includes("navya") ||
+      name.includes("aditi")
+    );
+  };
+
   // Helper to check BDE match
   const isBdeMatch = (itemBde: any, filterBde: string) => {
-    if (filterBde === "all") return true;
+    if (filterBde === "all") {
+      return isProfileBDE(itemBde);
+    }
     if (!itemBde) return false;
     return String(itemBde).toLowerCase() === filterBde.toLowerCase();
   };
@@ -312,7 +352,9 @@ export default function Reports() {
   };
 
   const isEmpMatch = (dbValue: any, employeeId: string) => {
-    if (employeeId === 'all') return true;
+    if (employeeId === 'all') {
+      return isProfileBDE(dbValue);
+    }
     if (!dbValue || !rawDbData) return false;
     const val = String(dbValue).trim().toLowerCase();
     const empId = employeeId.trim().toLowerCase();

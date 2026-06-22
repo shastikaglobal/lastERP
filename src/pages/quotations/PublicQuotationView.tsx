@@ -14,7 +14,7 @@ export default function PublicQuotationView() {
     queryFn: async () => {
       // NOTE: For public pages, we use the local API endpoint that does not require auth.
       // Make sure the Express server is handling CORS properly for public routes if accessed from a different origin.
-      const apiBase = window.location.origin.includes('localhost') ? 'http://localhost:8082' : ''; // Or just relative if proxied
+      const apiBase = window.location.origin.includes('localhost') ? 'http://127.0.0.1:8082' : ''; // Or just relative if proxied
       const res = await fetch(`/api/quotations/public/${id}`);
       if (!res.ok) {
         throw new Error("Failed to load quotation");

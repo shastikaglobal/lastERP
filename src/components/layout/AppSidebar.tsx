@@ -190,8 +190,22 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
         return g;
       }
 
-      // 2. BDE with no explicit permissions → show only CRM group
+      // 2. BDE with no explicit permissions → show CRM group, and specific items in other groups
       if (hasBdeDefaults) {
+        if (g.title === 'Farmers') {
+          return { ...g, items: g.items.filter(i => ['Farmers List', 'Convert to Customer'].includes(i.title)) };
+        }
+        if (g.title === 'Warehouse & Inventory') {
+          return {
+            ...g,
+            items: g.items.map(item => {
+              if (item.title === 'Quotations') {
+                return item;
+              }
+              return null;
+            }).filter((item): item is NonNullable<typeof item> => item !== null)
+          };
+        }
         if (!BDE_ALLOWED_GROUPS.includes(g.title)) return { ...g, items: [] };
         // For HR & Employees, only show Face Attendance (not salary, directory etc)
         if (g.title === 'HR & Employees') {

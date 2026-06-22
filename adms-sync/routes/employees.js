@@ -10,6 +10,101 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+const VALID_PROFILE_COLUMNS = new Set([
+  'id', 'company_id', 'is_active', 'created_at', 'updated_at', 'status',
+  'approved_by', 'approved_at', 'monthly_salary', 'punch_deadline',
+  'monthly_target', 'dob', 'joining_date', 'is_deleted', 'deleted_at',
+  'deleted_by', 'full_name', 'email', 'avatar_url', 'phone',
+  'employee_id', 'role', 'department', 'zoho_meeting_link',
+  'requested_role', 'system_mode', 'city', 'rejection_reason',
+  'email_signature', 'biometric_id'
+]);
+
+async function syncProfileToLocalDb(id, updates) {
+  try {
+    const keys = Object.keys(updates).filter(k => VALID_PROFILE_COLUMNS.has(k));
+    if (keys.length === 0) return;
+
+    const setClauses = keys.map((key, index) => `"${key}" = $${index + 1}`);
+    const values = keys.map(key => updates[key]);
+    
+    const queryText = `
+      UPDATE profiles 
+      SET ${setClauses.join(', ')}, updated_at = NOW() 
+      WHERE id = $${keys.length + 1}
+      RETURNING id
+    `;
+    
+    const { rowCount } = await db.query(queryText, [...values, id]);
+    
+    if (rowCount === 0) {
+      console.log(`[Sync] Profile ${id} not found locally during update. Fetching from Supabase to sync...`);
+      const { data: sbProfile, error: sbError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (!sbError && sbProfile) {
+        await db.query(
+          `INSERT INTO profiles (
+            id, company_id, full_name, email, avatar_url, phone, employee_id, role, department, 
+            zoho_meeting_link, requested_role, system_mode, city, status, rejection_reason, 
+            email_signature, biometric_id, is_active, is_deleted, created_at, updated_at,
+            approved_by, approved_at, monthly_salary, punch_deadline, monthly_target
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
+            $22, $23, $24, $25, $26
+          ) ON CONFLICT (id) DO UPDATE SET
+            company_id = EXCLUDED.company_id,
+            full_name = EXCLUDED.full_name,
+            email = EXCLUDED.email,
+            phone = EXCLUDED.phone,
+            role = EXCLUDED.role,
+            department = EXCLUDED.department,
+            is_active = EXCLUDED.is_active,
+            is_deleted = EXCLUDED.is_deleted,
+            updated_at = NOW()`,
+          [
+            sbProfile.id,
+            sbProfile.company_id || null,
+            sbProfile.full_name || null,
+            sbProfile.email || null,
+            sbProfile.avatar_url || null,
+            sbProfile.phone || null,
+            sbProfile.employee_id || null,
+            sbProfile.role || null,
+            sbProfile.department || null,
+            sbProfile.zoho_meeting_link || null,
+            sbProfile.requested_role || null,
+            sbProfile.system_mode || null,
+            sbProfile.city || null,
+            sbProfile.status || 'pending',
+            sbProfile.rejection_reason || null,
+            sbProfile.email_signature || null,
+            sbProfile.biometric_id || null,
+            sbProfile.is_active ?? true,
+            sbProfile.is_deleted ?? false,
+            sbProfile.created_at || new Date().toISOString(),
+            sbProfile.updated_at || new Date().toISOString(),
+            sbProfile.approved_by || null,
+            sbProfile.approved_at || null,
+            sbProfile.monthly_salary || null,
+            sbProfile.punch_deadline || null,
+            sbProfile.monthly_target || null
+          ]
+        );
+        console.log(`[Sync] Successfully created profile for ${id} in local VPS DB`);
+      }
+    } else {
+      console.log(`[Sync] Successfully synced updates to local VPS DB for profile ${id}`);
+    }
+  } catch (err) {
+    console.error(`[Sync] Failed to sync profile update for ${id} to VPS DB:`, err.message);
+  }
+}
+
+
 // GET /api/employees - Fetch all approved employees from Supabase
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -85,6 +180,10 @@ router.put('/:id', requireAuth, async (req, res) => {
 
     const { error } = await supabase.from('profiles').update(updates).eq('id', id);
     if (error) throw error;
+
+    // Sync changes to local VPS database profiles table
+    await syncProfileToLocalDb(id, updates);
+
     res.json({ success: true });
   } catch (err) {
     console.error('PUT /api/employees/:id error:', err.message);
@@ -138,6 +237,9 @@ router.put('/all/profiles/:id', requireAuth, async (req, res) => {
         .update(profileUpdate)
         .eq('id', id);
       if (profileErr) throw profileErr;
+
+      // Sync changes to local VPS database profiles table
+      await syncProfileToLocalDb(id, profileUpdate);
     }
 
     // Assign role — ONE ROLE PER PERSON
@@ -235,14 +337,96 @@ router.get('/:id/bio-data', requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/employees/:id/bio-data - Delete face embeddings for an employee from VPS DB
-router.delete('/:id/bio-data', requireAuth, async (req, res) => {
+// POST /api/employees/:id/reset-password - Generate password reset link and send to shastikaglobal11@gmail.com
+router.post('/:id/reset-password', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    await db.query('DELETE FROM face_embeddings WHERE employee_id::text = $1', [id]);
-    res.json({ success: true });
+    
+    // Safety check: Only shastikaglobal11@gmail.com is authorized
+    if (req.user.email !== 'shastikaglobal11@gmail.com') {
+      return res.status(403).json({ error: 'Unauthorized: Only shastikaglobal11@gmail.com is authorized to reset passwords.' });
+    }
+
+    // 1. Fetch employee profile details
+    const { data: employee, error: empErr } = await supabase
+      .from('profiles')
+      .select('full_name, email, company_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (empErr || !employee) {
+      return res.status(404).json({ error: 'Employee profile not found.' });
+    }
+
+    if (!employee.email) {
+      return res.status(400).json({ error: 'Employee does not have an email address.' });
+    }
+
+    // 2. Generate programmatic reset link using Supabase Admin Auth API
+    const redirectTo = `${req.headers.origin || 'http://localhost:8080'}/auth`;
+    const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: employee.email,
+      options: {
+        redirectTo: redirectTo
+      }
+    });
+
+    if (linkErr || !linkData?.properties?.action_link) {
+      console.error('[ResetPassword] Generate link failed:', linkErr);
+      return res.status(500).json({ error: linkErr?.message || 'Failed to generate reset link.' });
+    }
+
+    const actionLink = linkData.properties.action_link;
+
+    // 3. Send email to shastikaglobal11@gmail.com with details and recovery link
+    const htmlContent = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <h2 style="color: #1e293b;">🔑 Password Reset Request</h2>
+        <p>You requested a password reset link for the following employee:</p>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 8px 0; font-weight: bold; color: #64748b; width: 150px;">Employee Name</td>
+            <td style="padding: 8px 0; color: #334155;">${employee.full_name || 'N/A'}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Employee Email</td>
+            <td style="padding: 8px 0; color: #334155;">${employee.email}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Employee ID</td>
+            <td style="padding: 8px 0; font-family: monospace; color: #334155;">${id}</td>
+          </tr>
+        </table>
+        <p>Click the button below to complete the password reset process on their behalf:</p>
+        <div style="margin: 25px 0;">
+          <a href="${actionLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password Now</a>
+        </div>
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+          If the button above does not work, copy and paste this URL into your web browser:<br/>
+          <span style="word-break: break-all; color: #2563eb;">${actionLink}</span>
+        </p>
+      </div>
+    `;
+
+    console.log(`[ResetPassword] Queueing reset email to shastikaglobal11@gmail.com for ${employee.email}...`);
+    const { data: mailResult, error: mailErr } = await supabase.functions.invoke('send-resend-email', {
+      body: {
+        to: 'shastikaglobal11@gmail.com',
+        subject: `🔑 Password Reset Link: ${employee.full_name || employee.email}`,
+        html: htmlContent,
+        companyId: employee.company_id
+      }
+    });
+
+    if (mailErr) {
+      console.error('[ResetPassword] Edge Function mail delivery failed:', mailErr);
+      return res.status(500).json({ error: 'Generated link successfully, but failed to send the email notification.' });
+    }
+
+    res.json({ success: true, message: 'Password reset link sent to shastikaglobal11@gmail.com successfully.' });
   } catch (err) {
-    console.error('DELETE /api/employees/:id/bio-data error:', err.message);
+    console.error('POST /api/employees/:id/reset-password error:', err.message);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });

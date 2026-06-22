@@ -104,8 +104,8 @@ export const navGroups: NavGroup[] = [
     icon: ShoppingCart,
     items: [
       { title: "Dashboard", url: "/procurement/dashboard", icon: LayoutDashboard },
-      { title: "Purchase Orders", url: "/procurement/orders", icon: ShoppingCart },
       { title: "Suppliers", url: "/procurement/suppliers", icon: Building2 },
+      { title: "Purchase Orders", url: "/procurement/orders", icon: ShoppingCart },
     ],
   },
   {

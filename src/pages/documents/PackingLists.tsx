@@ -26,7 +26,7 @@ export default function PackingLists() {
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
 
-        const res = await fetch("http://localhost:8082/api/warehouse/packing_protocols", {
+        const res = await fetch("http://127.0.0.1:8082/api/warehouse/packing_protocols", {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -56,7 +56,7 @@ export default function PackingLists() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
 
-      const res = await fetch(`http://localhost:8082/api/warehouse/packing_protocols/${id}`, {
+      const res = await fetch(`http://127.0.0.1:8082/api/warehouse/packing_protocols/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });

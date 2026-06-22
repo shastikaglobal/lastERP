@@ -30,7 +30,7 @@ export interface CreatePackingInput {
 // Helper to determine direct API target when running locally
 const getApiUrl = (path: string) => {
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    return isLocalhost ? `http://localhost:8082${path}` : path;
+    return isLocalhost ? `http://127.0.0.1:8082${path}` : path;
 };
 
 // Create packing protocol

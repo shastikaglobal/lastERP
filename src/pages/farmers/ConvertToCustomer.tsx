@@ -3,6 +3,10 @@ import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { DataTable } from "@/components/shared/DataTable";
+import { Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Farmer {
   id: string;
@@ -27,12 +31,30 @@ export default function ConvertToCustomer() {
   const [searchParams] = useSearchParams();
   const selectedId = searchParams.get("id");
 
+  const [statusFilter, setStatusFilter] = useState("all");
+
   const selectedFarmer = useMemo(
     () => farmers.find((farmer) => farmer.id === selectedId) || null,
     [farmers, selectedId]
   );
 
   const displayFarmers = selectedId ? (selectedFarmer ? [selectedFarmer] : []) : farmers;
+
+  const filteredFarmers = useMemo(() => {
+    return displayFarmers.filter((farmer) => {
+      const isConverted = convertedIds.has(farmer.id);
+      if (statusFilter === "active") {
+        return farmer.is_active && !isConverted;
+      }
+      if (statusFilter === "inactive") {
+        return !farmer.is_active && !isConverted;
+      }
+      if (statusFilter === "converted") {
+        return isConverted;
+      }
+      return true;
+    });
+  }, [displayFarmers, statusFilter, convertedIds]);
 
   // Fetch farmers on mount (exclude soft-deleted)
   useEffect(() => {
@@ -58,42 +80,96 @@ export default function ConvertToCustomer() {
     return () => { mounted = false }
   }, []);
 
-  // Mark converted farmers based on existing customers for this company
+  // Mark converted farmers based on farmer_id link in customers table
   useEffect(() => {
     const loadConverted = async () => {
       if (!profile?.company_id || farmers.length === 0) return;
 
-      const emails = farmers
-        .map((f) => f.email?.trim())
-        .filter((email): email is string => !!email);
-
-      if (emails.length === 0) return;
-
-      const { data, error } = await supabase
-        .from("customers" as any)
-        .select("email")
-        .eq("company_id", profile.company_id)
-        .in("email", emails);
-
-      if (error) {
-        console.error("Failed to load converted customers", error);
-        return;
-      }
-
-      const existingEmails = new Set((data || []).map((c: any) => c.email?.trim()));
-      setConvertedIds((prev) => {
-        const next = new Set(prev);
-        farmers.forEach((farmer) => {
-          if (farmer.email && existingEmails.has(farmer.email.trim())) {
-            next.add(farmer.id);
-          }
+      try {
+        // Try fetching from the local API first (which connects to the VPS DB where farmer_id is fully supported)
+        const response = await fetch(`/api/customers?company_id=${profile.company_id}`, {
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
         });
-        return next;
-      });
+
+        if (!response.ok) {
+          throw new Error(`Local API returned status ${response.status}`);
+        }
+
+        const data = await response.json();
+        const convertedFarmerIds = new Set(
+          data.map((c: any) => c.farmer_id).filter((id: any): id is string => !!id)
+        );
+
+        setConvertedIds((prev) => {
+          const next = new Set(prev);
+          farmers.forEach((farmer) => {
+            if (convertedFarmerIds.has(farmer.id)) {
+              next.add(farmer.id);
+            }
+          });
+          return next;
+        });
+      } catch (apiError) {
+        console.warn("Failed to load from local customers API, falling back to Supabase", apiError);
+
+        // Fallback: Query Supabase directly
+        const farmerIds = farmers.map((f) => f.id);
+        const { data, error } = await supabase
+          .from("customers" as any)
+          .select("farmer_id")
+          .eq("company_id", profile.company_id)
+          .in("farmer_id", farmerIds);
+
+        if (error) {
+          console.error("Failed to load converted customers from Supabase", error);
+          // Fallback: try email-based check for older records without farmer_id
+          const emails = farmers
+            .map((f) => f.email?.trim())
+            .filter((email): email is string => !!email);
+
+          if (emails.length === 0) return;
+
+          const { data: emailData, error: emailError } = await supabase
+            .from("customers" as any)
+            .select("email")
+            .eq("company_id", profile.company_id)
+            .in("email", emails);
+
+          if (emailError) {
+            console.error("Fallback email check also failed", emailError);
+            return;
+          }
+
+          const existingEmails = new Set((emailData || []).map((c: any) => c.email?.trim()));
+          setConvertedIds((prev) => {
+            const next = new Set(prev);
+            farmers.forEach((farmer) => {
+              if (farmer.email && existingEmails.has(farmer.email.trim())) {
+                next.add(farmer.id);
+              }
+            });
+            return next;
+          });
+          return;
+        }
+
+        const convertedFarmerIds = new Set((data || []).map((c: any) => c.farmer_id));
+        setConvertedIds((prev) => {
+          const next = new Set(prev);
+          farmers.forEach((farmer) => {
+            if (convertedFarmerIds.has(farmer.id)) {
+              next.add(farmer.id);
+            }
+          });
+          return next;
+        });
+      }
     };
 
     loadConverted();
-  }, [farmers, profile?.company_id]);
+  }, [farmers, profile?.company_id, session?.access_token]);
 
   const handleConvert = async (id: string) => {
     const farmer = farmers.find((f) => f.id === id);
@@ -153,55 +229,79 @@ export default function ConvertToCustomer() {
     }
   };
 
+  const columns = [
+    { key: "full_name", header: "Farmer", render: (r: Farmer) => <span className="font-medium">{r.full_name}</span> },
+    { key: "phone", header: "Phone", render: (r: Farmer) => <span className="text-sm text-muted-foreground">{r.phone || "—"}</span> },
+    { key: "loc", header: "Location", render: (r: Farmer) => <span className="text-sm">{[r.village, r.district, r.state].filter(Boolean).join(", ") || "—"}</span> },
+    { key: "status", header: "Status", render: (r: Farmer) => (
+      convertedIds.has(r.id) ? (
+        <span className="text-green-600 font-semibold">Converted</span>
+      ) : r.is_active ? (
+        <span className="text-yellow-600 font-semibold">Active Farmer</span>
+      ) : (
+        <span className="text-muted-foreground">Inactive Farmer</span>
+      )
+    ) },
+    {
+      key: "actions",
+      header: "Action",
+      className: "text-right",
+      render: (r: Farmer) => (
+        <Button
+          size="sm"
+          disabled={convertedIds.has(r.id) || converting === r.id}
+          onClick={() => handleConvert(r.id)}
+        >
+          {convertedIds.has(r.id)
+            ? "Converted"
+            : converting === r.id
+            ? "Converting..."
+            : "Convert to Customer"}
+        </Button>
+      )
+    }
+  ];
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-2">Convert Farmer to Customer</h1>
-      <p className="mb-6 text-muted-foreground">Here you can convert farmers into customers.</p>
+    <div className="space-y-4">
+      <PageHeader
+        title="Convert Farmer to Customer"
+        description="Convert your farmer suppliers into official customers in the database"
+        breadcrumbs={[{ label: "Farmers", to: "/farmers" }, { label: "Convert to Customer" }]}
+      />
+
       {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
       {selectedId && !loading && !selectedFarmer && (
         <div className="mb-4 text-sm text-muted-foreground">No farmer found for the selected conversion.</div>
       )}
+
       {loading ? (
-        <div>Loading farmers...</div>
+        <div className="erp-card flex items-center justify-center py-16">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
       ) : (
-        <table className="min-w-full border">
-          <thead>
-            <tr>
-              <th className="border px-4 py-2 text-left">Name</th>
-              <th className="border px-4 py-2">Status</th>
-              <th className="border px-4 py-2">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayFarmers.map((farmer) => (
-              <tr key={farmer.id}>
-                <td className="border px-4 py-2">{farmer.full_name}</td>
-                <td className="border px-4 py-2">
-                  {convertedIds.has(farmer.id) ? (
-                    <span className="text-green-600">Converted</span>
-                  ) : farmer.is_active ? (
-                    <span className="text-yellow-600">Active Farmer</span>
-                  ) : (
-                    <span className="text-muted-foreground">Inactive Farmer</span>
-                  )}
-                </td>
-                <td className="border px-4 py-2">
-                  <Button
-                    size="sm"
-                    disabled={convertedIds.has(farmer.id) || converting === farmer.id}
-                    onClick={() => handleConvert(farmer.id)}
-                  >
-                    {convertedIds.has(farmer.id)
-                      ? "Converted"
-                      : converting === farmer.id
-                      ? "Converting..."
-                      : "Convert to Customer"}
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          data={filteredFarmers}
+          searchKeys={["full_name", "phone", "village", "district"]}
+          toolbar={
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-medium mr-1">Status:</span>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[140px] h-9 bg-white/5 border-white/10 text-white">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-white/10 text-white animate-fade-in duration-200">
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="active">Active Farmer</SelectItem>
+                  <SelectItem value="inactive">Inactive Farmer</SelectItem>
+                  <SelectItem value="converted">Converted</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          }
+          columns={columns}
+          emptyMessage="No farmers available for conversion"
+        />
       )}
     </div>
   );

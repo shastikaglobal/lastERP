@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Loader2, ClipboardCheck, Edit } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -29,6 +29,7 @@ export default function InspectionsList() {
   const [result, setResult] = useState("pending");
   const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { data, isLoading } = useQuery({
     queryKey: ["qc_inspections"],
@@ -46,6 +47,12 @@ export default function InspectionsList() {
       }
     },
   });
+  
+  const filteredData = useMemo(() => {
+    if (!data) return [];
+    if (statusFilter === "all") return data;
+    return data.filter((item: any) => item.result === statusFilter);
+  }, [data, statusFilter]);
 
   const handleOpenEdit = (inspection: any) => {
     setEditingInspection(inspection);
@@ -117,8 +124,24 @@ export default function InspectionsList() {
         />
       ) : (
         <DataTable
-          data={data}
-          searchKeys={["id"] as any}
+          data={filteredData}
+          searchKeys={["id", "batch_lot_number", "product_name", "result"] as any}
+          toolbar={
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-medium mr-1">Status:</span>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[140px] h-9 bg-white/5 border-white/10 text-white">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-white/10 text-white">
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          }
           columns={[
             { key: "lot", header: "Lot", render: (r: any) => <span className="font-mono text-xs">{r.batch?.lot_number || "—"}</span> },
             { key: "product", header: "Product", render: (r: any) => <span className="font-medium">{r.batch?.product?.name || "—"}</span> },

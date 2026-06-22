@@ -156,13 +156,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session?.user]);
 
 
-  const loadUserData = async (userId: string) => {
+  const loadUserData = async (userId: string, userEmail?: string, userMetadata?: any) => {
     // 1. Fetch Profile
-    const { data: prof } = await supabase
+    let { data: prof, error: fetchErr } = await supabase
       .from("profiles")
       .select("id, company_id, full_name, email, avatar_url, status, requested_role, rejection_reason, phone, dob, joining_date, system_mode, city, biometric_id, department, employee_id, role")
       .eq("id", userId)
       .maybeSingle();
+
+    if (fetchErr) {
+      console.error('[Auth] Error fetching profile:', fetchErr.message);
+    }
+
+    if (!prof && (userEmail || session?.user?.email)) {
+      // Profile does not exist, let's create a blank profile for this authenticated user!
+      console.log(`[Auth] Profile for user ${userId} not found. Creating default profile...`);
+      const emailVal = userEmail || session?.user?.email;
+      const defaultFullName = userMetadata?.full_name || userMetadata?.name || emailVal || 'User';
+      const { data: inserted, error: insertErr } = await supabase
+        .from("profiles")
+        .insert([{
+          id: userId,
+          email: emailVal,
+          full_name: defaultFullName,
+          company_id: '00000000-0000-0000-0000-00000000ae01', // shared default company
+          status: 'pending'
+        }])
+        .select("id, company_id, full_name, email, avatar_url, status, requested_role, rejection_reason, phone, dob, joining_date, system_mode, city, biometric_id, department, employee_id, role")
+        .maybeSingle();
+
+      if (insertErr) {
+        console.error('[Auth] Failed to create default profile:', insertErr.message);
+      } else if (inserted) {
+        prof = inserted;
+        console.log('[Auth] Default profile created successfully:', prof);
+      }
+    }
 
     if (prof) {
       // 2. Fetch Company Name separately
@@ -358,7 +387,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(sess);
       if (sess?.user) {
         userId = sess.user.id;
-        setTimeout(() => loadUserData(sess.user.id), 0);
+        setTimeout(() => loadUserData(sess.user.id, sess.user.email, sess.user.user_metadata), 0);
         subscribeRealtime(sess.user.id);
         
         // Track session login
@@ -387,7 +416,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(sess);
         if (sess?.user) {
           userId = sess.user.id;
-          loadUserData(sess.user.id).finally(() => setLoading(false));
+          loadUserData(sess.user.id, sess.user.email, sess.user.user_metadata).finally(() => setLoading(false));
           subscribeRealtime(sess.user.id);
           startSession(sess.user);
         } else {
@@ -408,7 +437,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refresh = async () => {
-    if (session?.user) await loadUserData(session.user.id);
+    if (session?.user) await loadUserData(session.user.id, session.user.email, session.user.user_metadata);
   };
 
   const signOut = async () => {

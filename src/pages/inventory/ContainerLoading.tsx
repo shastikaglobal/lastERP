@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Loader2, Container as ContainerIcon, CheckCircle2 } from "lucide-react";
 import {
   Dialog,
@@ -18,6 +19,7 @@ import { useCan } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 export default function ContainerLoading() {
+  const nav = useNavigate();
   const can = useCan();
   const queryClient = useQueryClient();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -99,7 +101,7 @@ export default function ContainerLoading() {
         breadcrumbs={[{ label: "Warehouse" }, { label: "Container Loading" }]}
         actions={
           can("shipments.manage") && (
-            <Button size="sm" className="btn-gold">
+            <Button size="sm" className="btn-gold" onClick={() => nav("/shipments/create")}>
               <Plus className="h-4 w-4 mr-1.5" /> Plan Loading
             </Button>
           )
@@ -115,6 +117,13 @@ export default function ContainerLoading() {
           icon={<ContainerIcon className="h-8 w-8" />}
           title="No containers found"
           description="There are currently no containers scheduled for loading."
+          action={
+            can("shipments.manage") && (
+              <Button size="sm" onClick={() => nav("/shipments/create")}>
+                <Plus className="h-4 w-4 mr-1.5" /> Plan Loading
+              </Button>
+            )
+          }
         />
       ) : (
         <DataTable

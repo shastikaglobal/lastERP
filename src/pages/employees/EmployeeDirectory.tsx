@@ -199,7 +199,7 @@ export default function EmployeeDirectory() {
     const openSession = sessions.find(s => s.user_id === userId && !s.logout_time);
     
     try {
-      const response = await fetch('http://localhost:8082/force-logout', {
+      const response = await fetch('http://127.0.0.1:8082/force-logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, sessionId: openSession?.id })
@@ -218,7 +218,7 @@ export default function EmployeeDirectory() {
     }
   };
 
-  const handleSendPasswordReset = async (email: string | null) => {
+  const handleSendPasswordReset = async (id: string, email: string | null) => {
     if (!isShastikaGlobal) {
       toast.error("Only shastikaglobal11 is authorized to reset passwords.");
       return;
@@ -228,11 +228,23 @@ export default function EmployeeDirectory() {
       return;
     }
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth`,
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No active session");
+
+      const response = await fetch(`/api/employees/${id}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
       });
-      if (error) throw error;
-      toast.success(`Password reset email sent to ${email}`);
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to trigger reset password");
+      }
+
+      toast.success(result.message || "Password reset link sent to shastikaglobal11@gmail.com");
     } catch (error: any) {
       toast.error(error.message || "Failed to send reset email");
     }
@@ -513,7 +525,7 @@ export default function EmployeeDirectory() {
                               variant="outline" 
                               size="sm" 
                               className="text-[10px] h-7 px-2 border-white/10 hover:bg-white/5"
-                              onClick={() => handleSendPasswordReset(e.email)}
+                              onClick={() => handleSendPasswordReset(e.id, e.email)}
                             >
                               Send Password Reset
                             </Button>
