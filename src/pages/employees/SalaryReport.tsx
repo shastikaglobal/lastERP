@@ -117,7 +117,7 @@ function calcMonthStats(
     if (log) {
       if (log.clock_in) {
         const minsLate = getLateMinutes(log.clock_in, deadline);
-        if (minsLate >= 2) {
+        if (minsLate >= 1) {
           if (log.is_excused && excusedMins + minsLate <= 120) {
             excusedMins += minsLate;
             presentDays++;

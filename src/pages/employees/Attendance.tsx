@@ -175,7 +175,7 @@ const getEmployeeMonthStats = (
     if (log) {
       if (log.clock_in) {
         const minutesLate = getLateMinutes(log.clock_in, deadline);
-        const isLate = minutesLate >= 2;
+        const isLate = minutesLate >= 1;
 
         if (isLate) {
           if (log.is_excused) {
@@ -1049,7 +1049,7 @@ export default function Attendance() {
                           {(() => {
                             const deadline = emp.punch_deadline || (emp.full_name?.toLowerCase().startsWith("preethi") ? "10:00:00" : "08:00:00");
                             const minutesLate = getLateMinutes(log.clock_in, deadline);
-                            const isLate = minutesLate >= 2;
+                            const isLate = minutesLate >= 1;
 
                             if (isLate) {
                               const monthlySalary = Number(emp.monthly_salary) || getEmpSalary(emp.full_name) || 0;
