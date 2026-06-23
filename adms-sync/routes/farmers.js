@@ -4,11 +4,16 @@ const db = require('../db');
 const { requireAuth } = require('../middleware/auth');
 
 const { createClient } = require('@supabase/supabase-js');
+const nodeFetch = require('node-fetch');
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
-  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      global: {
+        fetch: nodeFetch
+      }
+    })
   : null;
 
 // GET /api/farmers
@@ -17,6 +22,79 @@ router.get('/', requireAuth, async (req, res) => {
     const { company_id } = req.query;
     if (!company_id) {
       return res.status(400).json({ error: 'company_id is required' });
+    }
+
+    if (supabase) {
+      try {
+        console.log('[Sync] Fetching latest farmers from Supabase...');
+        const { data: sbFarmers, error: sbError } = await supabase
+          .from('farmers')
+          .select('*')
+          .eq('company_id', company_id);
+
+        if (sbError) {
+          console.error('[Sync] Supabase fetch failed:', sbError.message);
+        } else if (sbFarmers && sbFarmers.length > 0) {
+          console.log(`[Sync] Found ${sbFarmers.length} farmers in Supabase. Syncing to VPS DB...`);
+          for (const farmer of sbFarmers) {
+            const upsertQuery = `
+              INSERT INTO farmers (
+                id, company_id, code, full_name, email, phone, village, district, state, country, 
+                primary_crops, bank_account, notes, is_active, is_deleted, created_at, updated_at
+              ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 
+                $11, $12, $13, $14, $15, $16, $17
+              )
+              ON CONFLICT (id) DO UPDATE SET
+                company_id = EXCLUDED.company_id,
+                code = EXCLUDED.code,
+                full_name = EXCLUDED.full_name,
+                email = EXCLUDED.email,
+                phone = EXCLUDED.phone,
+                village = EXCLUDED.village,
+                district = EXCLUDED.district,
+                state = EXCLUDED.state,
+                country = EXCLUDED.country,
+                primary_crops = EXCLUDED.primary_crops,
+                bank_account = EXCLUDED.bank_account,
+                notes = EXCLUDED.notes,
+                is_active = EXCLUDED.is_active,
+                is_deleted = EXCLUDED.is_deleted,
+                updated_at = EXCLUDED.updated_at
+            `;
+            await db.query(upsertQuery, [
+              farmer.id,
+              farmer.company_id,
+              farmer.code || null,
+              farmer.full_name,
+              farmer.email || null,
+              farmer.phone || null,
+              farmer.village || null,
+              farmer.district || null,
+              farmer.state || null,
+              farmer.country || null,
+              farmer.primary_crops || null,
+              farmer.bank_account || null,
+              farmer.notes || null,
+              farmer.is_active ?? true,
+              farmer.is_deleted ?? false,
+              farmer.created_at,
+              farmer.updated_at
+            ]);
+          }
+
+          // Mark any farmers in local DB that are NOT in the active/inactive list in Supabase (or deleted)
+          const sbIds = sbFarmers.map(f => f.id);
+          if (sbIds.length > 0) {
+            await db.query(
+              `UPDATE farmers SET is_deleted = true WHERE company_id = $1 AND id NOT IN (${sbIds.map((_, i) => `$${i + 2}`).join(', ')})`,
+              [company_id, ...sbIds]
+            );
+          }
+        }
+      } catch (syncErr) {
+        console.error('[Sync] Error during dynamic farmers sync:', syncErr.message);
+      }
     }
 
     const query = `

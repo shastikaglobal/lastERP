@@ -42,9 +42,10 @@ export default function SuppliersList() {
   const [submitting, setSubmitting] = useState(false);
 
   const fetchSuppliers = async () => {
+    if (!profile?.company_id) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`/api/farmers`, {
+      const res = await fetch(`/api/farmers?company_id=${profile.company_id}`, {
         headers: { 'Authorization': `Bearer ${session?.access_token}` }
       });
       if (!res.ok) throw new Error("Failed to fetch suppliers");
@@ -67,8 +68,10 @@ export default function SuppliersList() {
   };
 
   useEffect(() => {
-    fetchSuppliers();
-  }, []);
+    if (profile?.company_id) {
+      fetchSuppliers();
+    }
+  }, [profile?.company_id]);
 
   const handleAddSupplier = async (e: React.FormEvent) => {
     e.preventDefault();

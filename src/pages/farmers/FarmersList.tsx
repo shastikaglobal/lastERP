@@ -146,19 +146,6 @@ export default function FarmersList() {
           </Button>
           
           <Button
-            size="xs"
-            variant="secondary"
-            onClick={(event) => {
-              event.stopPropagation();
-              nav(`/farmers/convert?id=${r.id}`);
-            }}
-            title="Convert to Customer"
-          >
-            <UserCheck className="h-4 w-4 mr-1 lg:hidden" />
-            <span className="hidden lg:inline">Convert to Customer</span>
-          </Button>
-          
-          <Button
             size="icon"
             variant="ghost"
             className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"

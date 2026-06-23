@@ -47,6 +47,28 @@ export default function ShipmentAnalytics() {
     gcTime: 5 * 60 * 1000
   });
 
+  const { data: stats = { onTimeRate: "—", avgTransit: "—", activeShipments: 0, delayed: 0 } } = useQuery({
+    queryKey: ['export_shipments_stats', profile?.company_id],
+    queryFn: async () => {
+      if (!profile?.company_id) return { onTimeRate: "—", avgTransit: "—", activeShipments: 0, delayed: 0 };
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(`/api/finance/reports/shipment_analytics?company_id=${profile.company_id}`, {
+          headers: { 'Authorization': `Bearer ${session?.access_token}` }
+        });
+        if (!res.ok) throw new Error("Failed to fetch export shipments stats from VPS");
+        return await res.json();
+      } catch (error) {
+        console.error('Error fetching shipments stats from VPS:', error);
+        return { onTimeRate: "—", avgTransit: "—", activeShipments: 0, delayed: 0 };
+      }
+    },
+    enabled: !!profile?.company_id,
+    staleTime: 20000,
+    gcTime: 5 * 60 * 1000
+  });
+
   const handleUpdateStatus = async () => {
     if (!editingShipment || !newStatus) return;
     setIsUpdating(true);
@@ -60,6 +82,7 @@ export default function ShipmentAnalytics() {
 
       toast.success(`Shipment updated to ${newStatus}`);
       queryClient.invalidateQueries({ queryKey: ['export_shipments_analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['export_shipments_stats'] });
       setEditingShipment(null);
     } catch (err: any) {
       toast.error(err.message || "Failed to update shipment");
@@ -67,51 +90,6 @@ export default function ShipmentAnalytics() {
       setIsUpdating(false);
     }
   };
-
-  const stats = {
-    onTimeRate: "—",
-    avgTransit: "—",
-    activeShipments: 0,
-    delayed: 0
-  };
-
-  if (shipments.length > 0) {
-    const active = shipments.filter(s => ['dispatched', 'loading', 'in_transit'].includes(s.status));
-    stats.activeShipments = active.length;
-    
-    const delayed = shipments.filter(s => {
-      if (!s.estimated_delivery) return false;
-      const today = new Date();
-      const estDate = new Date(s.estimated_delivery);
-      return estDate < today && !['delivered', 'completed'].includes(s.status);
-    });
-    stats.delayed = delayed.length;
-
-    const delivered = shipments.filter(s => s.status === 'delivered' || s.status === 'completed');
-    if (delivered.length > 0) {
-      const onTime = delivered.filter(s => {
-        if (!s.estimated_delivery) return true;
-        return true; // Assume on-time if delivered
-      }).length;
-      stats.onTimeRate = `${((onTime / delivered.length) * 100).toFixed(0)}%`;
-      
-      let totalDays = 0;
-      let countWithDates = 0;
-      delivered.forEach((s: any) => {
-        if (s.dispatch_date && s.created_at) {
-          const start = new Date(s.dispatch_date);
-          const end = new Date(s.created_at);
-          totalDays += Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24));
-          countWithDates++;
-        }
-      });
-      if (countWithDates > 0) {
-        stats.avgTransit = (totalDays / countWithDates).toFixed(1);
-      } else {
-        stats.avgTransit = "0";
-      }
-    }
-  }
 
   const displayShipments = shipments.map(s => ({
     id: s.shipment_number,
@@ -132,10 +110,18 @@ export default function ShipmentAnalytics() {
       />
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="On-Time Delivery" value={stats.onTimeRate} delta={{ value: "Live", positive: true }} />
-        <StatCard label="Avg Transit Days" value={stats.avgTransit} delta={{ value: "Live", positive: true }} />
+        <StatCard 
+          label="On-Time Delivery" 
+          value={stats.onTimeRate} 
+          delta={stats.onTimeRate !== "—" ? { value: "Live", positive: true } : undefined} 
+        />
+        <StatCard 
+          label="Avg Transit Days" 
+          value={stats.avgTransit} 
+          delta={stats.avgTransit !== "—" ? { value: "Live", positive: true } : undefined} 
+        />
         <StatCard label="Active Shipments" value={stats.activeShipments.toString()} />
-        <StatCard label="Delayed" value={stats.delayed.toString()} delta={{ value: "0", positive: true }} />
+        <StatCard label="Delayed" value={stats.delayed.toString()} delta={stats.delayed > 0 ? { value: "0", positive: true } : undefined} />
       </div>
 
       <div className="grid grid-cols-1 gap-6">

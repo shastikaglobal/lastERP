@@ -50,9 +50,13 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
+const nodeFetch = require('node-fetch');
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   realtime: {
     transport: WebSocket
+  },
+  global: {
+    fetch: nodeFetch
   }
 });
 
@@ -179,6 +183,132 @@ app.use('/api/purchase_orders', purchaseOrdersRoutes);
 app.use('/api/documents', documentsRoutes);
 
 
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // 1. Fetch employee profile details from Supabase to find company_id and full_name
+    const { data: employee, error: empErr } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, company_id')
+      .eq('email', email.trim())
+      .maybeSingle();
+
+    if (empErr || !employee) {
+      console.warn(`[ResetPassword] Profile not found for email: ${email}`);
+      return res.status(404).json({ error: 'Account with this email not found.' });
+    }
+
+    // 2. Generate programmatic reset link using Supabase Admin Auth API
+    const redirectTo = `${req.headers.origin || 'http://localhost:8080'}/auth`;
+    const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: employee.email,
+      options: {
+        redirectTo: redirectTo
+      }
+    });
+
+    if (linkErr || !linkData?.properties?.action_link) {
+      console.error('[ResetPassword] Generate link failed:', linkErr);
+      return res.status(500).json({ error: linkErr?.message || 'Failed to generate reset link.' });
+    }
+
+    const actionLink = linkData.properties.action_link;
+
+    // 3. Send email to shastikaglobal11@gmail.com with details and recovery link
+    const htmlContent = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <h2 style="color: #1e293b;">🔑 Password Reset Request</h2>
+        <p>A user requested a password reset link for the following account:</p>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 8px 0; font-weight: bold; color: #64748b; width: 150px;">Employee Name</td>
+            <td style="padding: 8px 0; color: #334155;">${employee.full_name || 'N/A'}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 8px 0; font-weight: bold; color: #64748b;">Employee Email</td>
+            <td style="padding: 8px 0; color: #334155;">${employee.email}</td>
+          </tr>
+        </table>
+        <p>Click the button below to complete the password reset process for them:</p>
+        <div style="margin: 25px 0;">
+          <a href="${actionLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password Now</a>
+        </div>
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+          If the button above does not work, copy and paste this URL into your web browser:<br/>
+          <span style="word-break: break-all; color: #2563eb;">${actionLink}</span>
+        </p>
+      </div>
+    `;
+
+    console.log(`[ResetPassword] Fetching Zoho account to send reset email to shastikaglobal11@gmail.com...`);
+    const { data: zohoAcc, error: zohoAccErr } = await supabase
+      .from('zoho_accounts')
+      .select('id, account_email')
+      .eq('is_deleted', false)
+      .limit(1)
+      .maybeSingle();
+
+    let emailSent = false;
+    let mailErrorMsg = '';
+
+    if (zohoAcc) {
+      console.log(`[ResetPassword] Using Zoho Account: ${zohoAcc.account_email}`);
+      const { data: emailRecord, error: insertErr } = await supabase
+        .from('emails')
+        .insert({
+          company_id: employee.company_id,
+          account_id: zohoAcc.id,
+          to_address: 'shastikaglobal11@gmail.com',
+          from_address: zohoAcc.account_email,
+          subject: `🔑 Password Reset Link: ${employee.full_name || employee.email}`,
+          body_html: htmlContent,
+          body_text: `A user requested a password reset link for ${employee.full_name || 'N/A'} (${employee.email}). Reset link: ${actionLink}`,
+          status: 'pending',
+          folder: 'sent',
+          received_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (!insertErr && emailRecord) {
+        const { data: mailResult, error: mailErr } = await supabase.functions.invoke('webhook-send-email', {
+          body: { record: emailRecord }
+        });
+
+        if (!mailErr && mailResult?.success !== false) {
+          emailSent = true;
+        } else {
+          mailErrorMsg = mailErr?.message || mailResult?.error || 'Webhook invocation returned failure.';
+          console.error('[ResetPassword] Zoho Mail send failed:', mailErrorMsg);
+        }
+      } else {
+        mailErrorMsg = insertErr?.message || 'Failed to insert email log record.';
+        console.error('[ResetPassword] Email record insert failed:', mailErrorMsg);
+      }
+    } else {
+      mailErrorMsg = zohoAccErr?.message || 'No connected Zoho account found in database.';
+      console.error('[ResetPassword] Zoho account query failed/empty:', mailErrorMsg);
+    }
+
+    if (!emailSent) {
+      return res.json({ 
+        success: true, 
+        message: 'Password reset request initiated, but email delivery failed. Please check the administrator Zoho Mail integration.'
+      });
+    }
+
+    res.json({ success: true, message: 'Password reset link sent to shastikaglobal11@gmail.com successfully.' });
+  } catch (err) {
+    console.error('POST /api/auth/reset-password error:', err.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 
 // Temporary top-level debug endpoint to fetch converted leads without router/auth issues
 app.get('/api/leads/converted/debug2', async (req, res) => {

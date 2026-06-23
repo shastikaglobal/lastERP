@@ -244,7 +244,12 @@ export default function EmployeeDirectory() {
         throw new Error(result.error || "Failed to trigger reset password");
       }
 
-      toast.success(result.message || "Password reset link sent to shastikaglobal11@gmail.com");
+      if (result.link) {
+        navigator.clipboard.writeText(result.link);
+        toast.success("Password reset link copied to clipboard directly (email failed to send).");
+      } else {
+        toast.success(result.message || "Password reset link sent to shastikaglobal11@gmail.com");
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to send reset email");
     }

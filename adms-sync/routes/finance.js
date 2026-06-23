@@ -89,6 +89,77 @@ router.get('/reports/cash_flow', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/finance/reports/shipment_analytics
+router.get('/reports/shipment_analytics', requireAuth, async (req, res) => {
+  try {
+    const { company_id } = req.query;
+    if (!company_id) {
+      return res.status(400).json({ error: "company_id is required" });
+    }
+
+    // Get user's company_id from local DB profiles to verify permission
+    const { rows: userProfile } = await db.query(
+      'SELECT company_id FROM profiles WHERE id = $1 LIMIT 1',
+      [req.user.sub]
+    );
+
+    if (userProfile.length === 0 || userProfile[0].company_id !== company_id) {
+      return res.status(403).json({ error: "Forbidden: Access to requested company data is not allowed" });
+    }
+
+    // Run a query to calculate all the shipment stats for the company
+    const statsQuery = `
+      SELECT
+        -- Active Shipments (status in Pending, Processing, In Transit)
+        COUNT(*) FILTER (WHERE status IN ('Pending', 'Processing', 'In Transit') AND (is_deleted = false OR is_deleted IS NULL)) AS active_shipments,
+        
+        -- Delayed Shipments (status is not Delivered, and eta is in the past)
+        COUNT(*) FILTER (
+          WHERE status IN ('Pending', 'Processing', 'In Transit')
+            AND eta IS NOT NULL 
+            AND eta < CURRENT_DATE
+            AND (is_deleted = false OR is_deleted IS NULL)
+        ) AS delayed_shipments,
+
+        -- Total Delivered Shipments
+        COUNT(*) FILTER (WHERE status = 'Delivered' AND (is_deleted = false OR is_deleted IS NULL)) AS delivered_shipments,
+
+        -- On-time Delivered Shipments (delivered and eta was not exceeded)
+        COUNT(*) FILTER (
+          WHERE status = 'Delivered' 
+            AND (eta IS NULL OR updated_at::date <= eta)
+            AND (is_deleted = false OR is_deleted IS NULL)
+        ) AS on_time_shipments,
+
+        -- Avg Transit Days (for Delivered shipments with departure_date)
+        AVG(CASE WHEN status = 'Delivered' AND departure_date IS NOT NULL THEN (updated_at::date - departure_date) END) AS avg_transit_days
+      FROM export_shipments
+      WHERE company_id = $1;
+    `;
+
+    const { rows } = await db.query(statsQuery, [company_id]);
+    const row = rows[0] || {};
+
+    const activeShipments = parseInt(row.active_shipments || '0', 10);
+    const delayed = parseInt(row.delayed_shipments || '0', 10);
+    const delivered = parseInt(row.delivered_shipments || '0', 10);
+    const onTime = parseInt(row.on_time_shipments || '0', 10);
+    const avgTransitDays = (row.avg_transit_days !== null && row.avg_transit_days !== undefined) ? parseFloat(row.avg_transit_days).toFixed(1) : "—";
+
+    const onTimeRate = delivered > 0 ? `${((onTime / delivered) * 100).toFixed(0)}%` : "—";
+
+    res.json({
+      onTimeRate,
+      avgTransit: avgTransitDays,
+      activeShipments,
+      delayed
+    });
+  } catch (err) {
+    console.error("Error GET /api/finance/reports/shipment_analytics:", err.message);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 const hasDeletedColCache = {};
 
 // GET /api/finance/:table

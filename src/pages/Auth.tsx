@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { signInWithGoogle } from "@/lib/googleAuth";
 import { SetPasswordModal } from "@/components/SetPasswordModal";
+import { ResetPasswordModal } from "@/components/ResetPasswordModal";
 
 import { Input } from "@/components/ui/input";
 
@@ -19,6 +20,7 @@ export default function Auth() {
   const [busyEmail, setBusyEmail] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isResetOpen, setIsResetOpen] = useState(false);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,6 +138,15 @@ export default function Auth() {
                 required
                 className="bg-white/5"
               />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsResetOpen(true)}
+                  className="text-xs text-primary hover:underline font-medium focus:outline-none"
+                >
+                  Forgot Password?
+                </button>
+              </div>
             </div>
             <Button
               type="submit"
@@ -145,6 +156,8 @@ export default function Auth() {
               {busyEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign In"}
             </Button>
           </form>
+
+          <ResetPasswordModal isOpen={isResetOpen} onClose={() => setIsResetOpen(false)} />
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">

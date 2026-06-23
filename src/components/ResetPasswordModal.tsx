@@ -24,26 +24,24 @@ export function ResetPasswordModal({ isOpen, onClose }: ResetPasswordModalProps)
       return;
     }
 
-    if (email.trim().toLowerCase() !== "shastikaglobal11@gmail.com") {
-      toast.error("Password resets must be initiated by shastikaglobal11 only. Please contact the administrator.");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      // Supabase Logic: Sends a password reset email to the user.
-      // The redirectTo URL should be the route in your app where the user sets their new password.
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/update-password`,
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
       });
 
-      if (error) {
-        throw error;
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to initiate password reset");
       }
 
       setIsSent(true);
-      toast.success("Password reset link sent to your email!");
+      toast.success(data.message || "Password reset request sent successfully!");
     } catch (error: any) {
       console.error("Error resetting password:", error);
       toast.error(error.message || "Failed to send reset link");
@@ -64,8 +62,8 @@ export function ResetPasswordModal({ isOpen, onClose }: ResetPasswordModalProps)
           </DialogTitle>
           <DialogDescription className="text-muted-foreground text-sm">
             {isSent 
-              ? "We've sent a password reset link to your email. Click the link to securely update your password." 
-              : "Enter the email address associated with your account, and we'll send you a link to reset your password."}
+              ? "We've sent a password reset link to shastikaglobal11@gmail.com. Please check with them to securely update your password." 
+              : "Enter the email address associated with your account, and we'll send the reset link to shastikaglobal11@gmail.com."}
           </DialogDescription>
         </DialogHeader>
 
@@ -102,7 +100,7 @@ export function ResetPasswordModal({ isOpen, onClose }: ResetPasswordModalProps)
             </DialogFooter>
           </form>
         ) : (
-          <div className="py-6 flex flex-col gap-4 items-center">
+          <div className="py-6 flex flex-col gap-4 items-center w-full">
              <Button
                 type="button"
                 variant="outline"

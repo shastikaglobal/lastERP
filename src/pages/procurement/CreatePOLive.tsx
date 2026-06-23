@@ -129,12 +129,13 @@ export default function CreatePOLive() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!profile?.company_id) return;
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const headers = { 'Authorization': `Bearer ${session?.access_token}` };
 
         const [supRes, prodRes] = await Promise.all([
-          fetch(`/api/farmers`, { headers }),
+          fetch(`/api/farmers?company_id=${profile.company_id}`, { headers }),
           fetch(`/api/products`, { headers })
         ]);
 
@@ -164,8 +165,10 @@ export default function CreatePOLive() {
         setLoading(false);
       }
     };
-    fetchData();
-  }, []);
+    if (profile?.company_id) {
+      fetchData();
+    }
+  }, [profile?.company_id]);
 
   const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
 

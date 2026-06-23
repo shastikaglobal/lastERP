@@ -23,6 +23,9 @@ async function run() {
   try {
     await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS farmer_id UUID`);
     console.log('✅ Added farmer_id column to VPS customers table');
+    await pool.query(`ALTER TABLE customers DROP CONSTRAINT IF EXISTS customers_farmer_id_fkey`);
+    await pool.query(`ALTER TABLE customers ADD CONSTRAINT customers_farmer_id_fkey FOREIGN KEY (farmer_id) REFERENCES farmers(id) ON DELETE SET NULL`);
+    console.log('✅ Added foreign key constraint (farmer_id references farmers(id))');
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_customers_farmer_id ON customers (farmer_id)`);
     console.log('✅ Created index on farmer_id');
   } catch (err) {
@@ -33,9 +36,15 @@ async function run() {
 
   // 2. Supabase migration via RPC (raw SQL)
   console.log('\n--- Supabase Migration ---');
-  const { error } = await supabase.rpc('exec_sql', {
-    sql: `ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS farmer_id UUID REFERENCES public.farmers(id) ON DELETE SET NULL; CREATE INDEX IF NOT EXISTS idx_customers_farmer_id ON public.customers (farmer_id);`
-  }).catch(() => ({ error: { message: 'exec_sql RPC not available' } }));
+  let error;
+  try {
+    const res = await supabase.rpc('exec_sql', {
+      sql: `ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS farmer_id UUID REFERENCES public.farmers(id) ON DELETE SET NULL; CREATE INDEX IF NOT EXISTS idx_customers_farmer_id ON public.customers (farmer_id);`
+    });
+    error = res.error;
+  } catch (err) {
+    error = { message: err.message || 'exec_sql RPC not available' };
+  }
 
   if (error) {
     console.warn('⚠️  exec_sql RPC not available or failed:', error.message);

@@ -1,7 +1,15 @@
 const db = require('../adms-sync/db');
 async function run() {
-  const q = await db.query(`SELECT * FROM customers WHERE farmer_id = '5aafa79f-9292-4b12-aff0-12a9c66484bf'`);
-  console.log("CUSTOMERS_WITH_FARMER_ID:", q.rows);
+  const queryText = `
+    SELECT column_name FROM information_schema.columns 
+    WHERE table_name = 'customers' AND column_name = 'farmer_id';
+  `;
+  try {
+    const q = await db.query(queryText);
+    console.log("QUERY_RESULTS:", q.rows);
+  } catch (err) {
+    console.error("Query Error:", err);
+  }
   process.exit(0);
 }
 run();

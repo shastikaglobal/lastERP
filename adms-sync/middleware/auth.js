@@ -29,7 +29,12 @@ if (dns.setDefaultResultOrder) {
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+const nodeFetch = require('node-fetch');
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  global: {
+    fetch: nodeFetch
+  }
+});
 
 const requireAuth = async (req, res, next) => {
   const authHeader = req.headers.authorization;

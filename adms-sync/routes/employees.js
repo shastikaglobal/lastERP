@@ -409,19 +409,62 @@ router.post('/:id/reset-password', requireAuth, async (req, res) => {
       </div>
     `;
 
-    console.log(`[ResetPassword] Queueing reset email to shastikaglobal11@gmail.com for ${employee.email}...`);
-    const { data: mailResult, error: mailErr } = await supabase.functions.invoke('send-resend-email', {
-      body: {
-        to: 'shastikaglobal11@gmail.com',
-        subject: `🔑 Password Reset Link: ${employee.full_name || employee.email}`,
-        html: htmlContent,
-        companyId: employee.company_id
-      }
-    });
+    console.log(`[ResetPassword] Fetching Zoho account to send reset email to shastikaglobal11@gmail.com...`);
+    const { data: zohoAcc, error: zohoAccErr } = await supabase
+      .from('zoho_accounts')
+      .select('id, account_email')
+      .eq('is_deleted', false)
+      .limit(1)
+      .maybeSingle();
 
-    if (mailErr) {
-      console.error('[ResetPassword] Edge Function mail delivery failed:', mailErr);
-      return res.status(500).json({ error: 'Generated link successfully, but failed to send the email notification.' });
+    let emailSent = false;
+    let mailErrorMsg = '';
+
+    if (zohoAcc) {
+      console.log(`[ResetPassword] Using Zoho Account: ${zohoAcc.account_email}`);
+      const { data: emailRecord, error: insertErr } = await supabase
+        .from('emails')
+        .insert({
+          company_id: employee.company_id,
+          account_id: zohoAcc.id,
+          to_address: 'shastikaglobal11@gmail.com',
+          from_address: zohoAcc.account_email,
+          subject: `🔑 Password Reset Link: ${employee.full_name || employee.email}`,
+          body_html: htmlContent,
+          body_text: `You requested a password reset link for ${employee.full_name || 'N/A'} (${employee.email}). Reset link: ${actionLink}`,
+          status: 'pending',
+          folder: 'sent',
+          received_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (!insertErr && emailRecord) {
+        const { data: mailResult, error: mailErr } = await supabase.functions.invoke('webhook-send-email', {
+          body: { record: emailRecord }
+        });
+
+        if (!mailErr && mailResult?.success !== false) {
+          emailSent = true;
+        } else {
+          mailErrorMsg = mailErr?.message || mailResult?.error || 'Webhook invocation returned failure.';
+          console.error('[ResetPassword] Zoho Mail send failed:', mailErrorMsg);
+        }
+      } else {
+        mailErrorMsg = insertErr?.message || 'Failed to insert email log record.';
+        console.error('[ResetPassword] Email record insert failed:', mailErrorMsg);
+      }
+    } else {
+      mailErrorMsg = zohoAccErr?.message || 'No connected Zoho account found in database.';
+      console.error('[ResetPassword] Zoho account query failed/empty:', mailErrorMsg);
+    }
+
+    if (!emailSent) {
+      return res.json({ 
+        success: true, 
+        message: 'Link generated successfully, but failed to send email. You can copy it directly.',
+        link: actionLink 
+      });
     }
 
     res.json({ success: true, message: 'Password reset link sent to shastikaglobal11@gmail.com successfully.' });

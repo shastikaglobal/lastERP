@@ -1,65 +1,47 @@
-const db = require('../adms-sync/db');
 const { createClient } = require('@supabase/supabase-js');
-
-// load env
 const path = require('path');
 const fs = require('fs');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const env = fs.readFileSync(path.join(__dirname, '../.env'), 'utf8');
+const supabaseUrl = env.match(/VITE_SUPABASE_URL=(.*)/)[1].replace(/['"]/g, '').trim();
+const supabaseKey = env.match(/VITE_SUPABASE_ANON_KEY=(.*)/)[1].replace(/['"]/g, '').trim();
 
-async function test() {
-  const farmerId = '5aafa79f-9292-4b12-aff0-12a9c66484bf'; // Jothiprakash
-  const company_id = '00000000-0000-0000-0000-00000000ae01';
-  const name = 'Jothiprakash';
-  const email = '';
-  const country = '';
-  const phone = '8122207579';
-  const notes = '';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-  try {
-    console.log("Starting test...");
-    let { rows: farmerRows } = await db.query(
-      `SELECT id, company_id, full_name, email, phone, country, notes, is_deleted FROM farmers WHERE id = $1`,
-      [farmerId]
-    );
-    console.log("Farmer rows count:", farmerRows.length);
-    if (farmerRows.length === 0) {
-      console.log("Farmer not found locally");
-      return;
-    }
-    const farmer = farmerRows[0];
-    const customerEmail = (email || farmer.email || '').trim();
+async function testConvert() {
+  console.log("Signing in...");
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    email: 'karunyajothiprakash811@gmail.com',
+    password: 'Welcome@Shastika2026'
+  });
 
-    // Check duplicate customer by farmer_id (most reliable) or email
-    const { rows: existingByFarmer } = await db.query(
-      `SELECT id FROM customers WHERE company_id = $1 AND farmer_id = $2 LIMIT 1`,
-      [company_id, farmerId]
-    );
-    console.log("Existing by farmer:", existingByFarmer);
-
-    // Insert customer in local VPS database
-    console.log("Inserting customer in local VPS DB...");
-    const { rows: insertedRows } = await db.query(
-      `INSERT INTO customers (company_id, name, email, country, phone, notes, farmer_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [
-        company_id,
-        name || farmer.full_name,
-        customerEmail || null,
-        country || farmer.country || null,
-        phone || farmer.phone || null,
-        notes || farmer.notes || null,
-        farmerId,
-      ]
-    );
-    console.log("Inserted rows:", insertedRows);
-  } catch (err) {
-    console.error("ERROR DETECTED:", err);
+  if (authError) {
+    console.error("Sign in failed:", authError);
+    return;
   }
-  process.exit(0);
+
+  const token = authData.session.access_token;
+  const farmerId = 'b57f668b-f86f-41a5-8945-884f09c1ebc4'; // pavish
+  const companyId = '00000000-0000-0000-0000-00000000ae01';
+
+  console.log(`Sending POST request to convert farmer ${farmerId}...`);
+  try {
+    const res = await fetch(`https://shastikaglobalexport.co.in/api/farmers/${farmerId}/convert`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ company_id: companyId })
+    });
+
+    const status = res.status;
+    const body = await res.text();
+    console.log(`Response Status: ${status}`);
+    console.log(`Response Body: ${body}`);
+  } catch (err) {
+    console.error("Fetch request failed:", err.message);
+  }
 }
 
-test();
+testConvert();
