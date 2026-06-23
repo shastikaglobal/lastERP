@@ -41,7 +41,6 @@ export default function EmployeeDirectory() {
   const { onlineUsers, roleSlugs, user, activeMinutes, idleMinutes, profile } = useAuth();
   const isAdminOrManager = useIsAdminOrManager();
   const isAdmin = Array.from(roleSlugs).map(s => s.toLowerCase()).includes("admin");
-  const isShastikaGlobal = profile?.email === "shastikaglobal11@gmail.com";
   const [employees, setEmployees] = useState<ProfileRow[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -219,8 +218,8 @@ export default function EmployeeDirectory() {
   };
 
   const handleSendPasswordReset = async (id: string, email: string | null) => {
-    if (!isShastikaGlobal) {
-      toast.error("Only shastikaglobal11 is authorized to reset passwords.");
+    if (!isAdmin) {
+      toast.error("Only admins are authorized to reset passwords.");
       return;
     }
     if (!email) {
@@ -525,8 +524,7 @@ export default function EmployeeDirectory() {
                     {isAdmin && (
                       <div className="mt-4 pt-4 border-t border-white/5 opacity-50 hover:opacity-100 transition-opacity">
                         <div className="flex justify-between items-center mb-3">
-                          {isShastikaGlobal && (
-                            <Button 
+                          <Button 
                               variant="outline" 
                               size="sm" 
                               className="text-[10px] h-7 px-2 border-white/10 hover:bg-white/5"
@@ -534,7 +532,6 @@ export default function EmployeeDirectory() {
                             >
                               Send Password Reset
                             </Button>
-                          )}
                           
                           <Button 
                             variant="outline" 

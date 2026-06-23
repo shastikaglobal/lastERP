@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, useIsAdminOrManager } from "@/hooks/useAuth";
 import { Loader2, User as UserIcon, Lock, Bell, Mail, Activity, Shield, LogIn, Camera, Globe } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
@@ -20,8 +20,12 @@ const tabs = [
   { id: 'activity', label: 'My Activity Log', icon: Activity },
 ];
 
+const SUPER_ADMIN_EMAIL = "shastikaglobal11@gmail.com";
+
 export default function AccountSettings() {
-  const { profile, user } = useAuth();
+  const { profile, user, roleSlugs } = useAuth();
+  const isAdmin = Array.from(roleSlugs).map(s => s.toLowerCase()).includes("admin");
+  const canChangePassword = profile?.email === SUPER_ADMIN_EMAIL || user?.email === SUPER_ADMIN_EMAIL;
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -313,7 +317,7 @@ export default function AccountSettings() {
         {/* Sidebar Tabs */}
         <div className="w-full md:w-64 shrink-0">
           <div className="bg-[#1a2332] rounded-xl overflow-hidden flex flex-col p-2 gap-1 shadow-md border border-slate-800/50">
-            {tabs.map(tab => (
+            {tabs.filter(tab => tab.id !== 'security' || isAdmin).map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -409,12 +413,12 @@ export default function AccountSettings() {
             </div>
           )}
 
-          {activeTab === 'security' && (
+          {activeTab === 'security' && isAdmin && (
             <div className="p-6 md:p-8 animate-in fade-in duration-300">
               <h2 className="text-xl font-semibold text-foreground mb-1">Login & Security</h2>
               <p className="text-sm text-muted-foreground mb-6">Manage your password and active sessions.</p>
 
-              {(profile?.email === "shastikaglobal11@gmail.com" || user?.email === "shastikaglobal11@gmail.com") ? (
+              {canChangePassword ? (
                 <Section title="Change Password" className="mb-8">
                   <div className="grid gap-4 max-w-sm">
                     <div className="space-y-2">
@@ -432,8 +436,8 @@ export default function AccountSettings() {
                 </Section>
               ) : (
                 <Section title="Change Password" className="mb-8">
-                  <div className="p-4 border border-blue-900/30 rounded-lg bg-blue-950/20 text-blue-400 text-sm max-w-md">
-                    🔑 Password changes are restricted. Please contact the administrator (<strong>shastikaglobal11@gmail.com</strong>) to reset your password.
+                  <div className="p-4 border border-amber-900/30 rounded-lg bg-amber-950/20 text-amber-400 text-sm max-w-md">
+                    🔒 Password changes are restricted to the system owner only.
                   </div>
                 </Section>
               )}
