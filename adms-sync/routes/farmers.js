@@ -14,9 +14,20 @@ const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
 // GET /api/farmers
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const { rows } = await db.query(
-      `SELECT * FROM farmers WHERE is_deleted IS NOT TRUE ORDER BY created_at DESC`
-    );
+    const { company_id } = req.query;
+    if (!company_id) {
+      return res.status(400).json({ error: 'company_id is required' });
+    }
+
+    const query = `
+      SELECT f.*, 
+             CASE WHEN c.id IS NOT NULL THEN 'converted' ELSE 'active' END as conversion_status
+      FROM farmers f
+      LEFT JOIN customers c ON c.farmer_id = f.id
+      WHERE f.company_id = $1 AND f.is_deleted IS NOT TRUE
+      ORDER BY f.created_at DESC
+    `;
+    const { rows } = await db.query(query, [company_id]);
     res.json(rows);
   } catch (err) {
     console.error('DB Error (get farmers):', err);
@@ -42,6 +53,26 @@ router.post('/', requireAuth, async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error('DB Error (create farmer):', err);
+    res.status(500).json({ error: err.message || 'Internal Server Error' });
+  }
+});
+
+// GET /api/farmers/converted
+router.get('/converted', requireAuth, async (req, res) => {
+  try {
+    const { company_id } = req.query;
+    if (!company_id) {
+      return res.status(400).json({ error: 'company_id is required' });
+    }
+    const { rows } = await db.query(
+      `SELECT f.id FROM farmers f 
+       JOIN customers c ON c.farmer_id = f.id 
+       WHERE f.company_id = $1 AND f.is_deleted IS NOT TRUE`,
+      [company_id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('DB Error (get converted farmers):', err);
     res.status(500).json({ error: err.message || 'Internal Server Error' });
   }
 });
@@ -224,8 +255,10 @@ router.post('/:id/convert', requireAuth, async (req, res) => {
         }
       }
 
-      if (existingVpsCust || existingSbCust) {
-        console.log(`[Sync] Customer with email ${customerEmail} already exists. Connecting farmer ${farmerId} to this customer...`);
+      const hasOtherFarmer = (existingVpsCust && existingVpsCust.farmer_id) || (existingSbCust && existingSbCust.farmer_id);
+
+      if ((existingVpsCust || existingSbCust) && !hasOtherFarmer) {
+        console.log(`[Sync] Customer with email ${customerEmail} already exists and is not linked to another farmer. Connecting farmer ${farmerId} to this customer...`);
         
         // Use existing ID
         const targetId = existingVpsCust?.id || existingSbCust?.id;
@@ -270,6 +303,9 @@ router.post('/:id/convert', requireAuth, async (req, res) => {
         }
       } else {
         // Create new customer record
+        // If a customer with this email already exists in the company, set email to null to avoid unique key violation
+        const insertEmail = (existingVpsCust || existingSbCust) ? null : customerEmail;
+
         // Insert into local VPS database
         const { rows: insertedRows } = await db.query(
           `INSERT INTO customers (company_id, name, email, country, phone, notes, farmer_id) 
@@ -277,7 +313,7 @@ router.post('/:id/convert', requireAuth, async (req, res) => {
           [
             company_id,
             name || farmer.full_name,
-            customerEmail || null,
+            insertEmail || null,
             country || farmer.country || null,
             phone || farmer.phone || null,
             notes || farmer.notes || null,
