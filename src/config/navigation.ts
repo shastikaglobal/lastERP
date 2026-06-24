@@ -69,21 +69,12 @@ export const navGroups: NavGroup[] = [
       { title: "Client Success", url: "/crm/customers", icon: Award, permission: "farmers.view" },
       { title: "Customer Database", url: "/crm/customer-database", icon: Database, permission: "farmers.view" },
       { title: "Task", url: "/crm/tasks", icon: ClipboardCheck, permission: "farmers.view" },
-      { title: "Report", url: "/crm/reports", icon: BarChart3, permission: "farmers.view" },
       { title: "Mail Box", url: "/system/mailbox", icon: Inbox, permission: "farmers.view" },
       { title: "Email Integration", url: "/crm/email", icon: Mail, permission: "farmers.view" },
       // { title: "Security", url: "/crm/security", icon: ShieldCheck, permission: "farmers.view" },
       { title: "Advanced Security", url: "/crm/advanced-security", icon: ShieldAlert, permission: "farmers.view" },
       { title: "Zoho API Sync", url: "/system/integrations/zoho", icon: Mail, permission: "farmers.view" },
     ],
-  },
-  {
-    title: "Revenue & Performance Analytics",
-    icon: TrendingUp,
-    items: [
-      { title: "Performance", url: "/crm/performance", icon: TrendingUp, permission: "farmers.view" },
-      { title: "Revenue Analytics", url: "/crm/revenue", icon: TrendingUp, permission: "farmers.view" },
-    ]
   },
   // Mobile CRM – commented out, sidebar section disabled
   // {
@@ -223,15 +214,6 @@ export const navGroups: NavGroup[] = [
       { title: "Journal Entry", url: "/tally/journal-entry", icon: FileText },
       { title: "Ledger", url: "/tally/ledger", icon: FileText },
       { title: "Trial Balance", url: "/tally/trial-balance", icon: FileText },
-    ],
-  },
-  {
-    title: "Reports",
-    icon: BarChart3,
-    items: [
-      { title: "GST Reports", url: "/tally/gst-reports", icon: BarChart3 },
-      { title: "P&L Statement", url: "/tally/pl-statement", icon: BarChart3 },
-      { title: "Balance Sheet", url: "/tally/balance-sheet", icon: BarChart3 },
     ],
   },
   {

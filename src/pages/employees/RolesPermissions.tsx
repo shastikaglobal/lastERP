@@ -10,8 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 const SECTION_MAPPING: Record<string, string[]> = {
   "DASHBOARDS": ["Executive & Activities", "Sales Analytics", "Shipment Analytics", "Financial Overview", "Employee Productivity", "Roles & Permissions"],
   "FARMERS": ["Farmers List", "Create Farmer", "Convert to Customer"],
-  "CRM": ["Dashboard", "Leads", "Pipelines", "Follow-Ups", "Communication", "Client Acquisition", "Successful Conversation", "Client Success", "Customer Database", "Task", "Report", "Mail Box"],
-  "REVENUE & PERFORMANCE ANALYTICS": ["Performance", "Revenue Analytics"],
+  "CRM": ["Dashboard", "Leads", "Pipelines", "Follow-Ups", "Communication", "Client Acquisition", "Successful Conversation", "Client Success", "Customer Database", "Task", "Mail Box"],
   "MOBILE CRM": ["Mobile Login", "Push Notifications", "Call Logging", "GPS Tracking", "IP Tracking", "Device Authorization"],
   "PROCUREMENT": ["Dashboard", "Purchase Orders", "Suppliers"],
   "WAREHOUSE & INVENTORY": ["Dashboard", "Receiving Goods", "Available Stock Management", "Reserved Stock Tracking", "Export Ready Inventory", "Batch-wise Stock Tracking", "Damaged Stock Management", "Expiry Monitoring", "Multi-Warehouse Management", "Packing Management", "Inspection", "New Inspection", "Approvals", "WH Quality Control", "Container Loading", "Dispatch", "Shipment Register", "Create Shipment", "Container Tracking", "Delivery Status", "Barcodes", "Generate QR", "Scan", "Quotations", "Create Quotation", "Convert to Order", "Orders", "Create Order", "Status Tracking", "Fulfillment", "Invoices", "Packing Lists", "Certificate of Origin", "Document Viewer"],
@@ -19,7 +18,6 @@ const SECTION_MAPPING: Record<string, string[]> = {
   "FINANCE": ["Payment Register", "Overdue", "Multi-Currency Ledger", "Financial Reports"],
   "TALLY": ["Tally Module", "Counts"],
   "ACCOUNTS": ["Journal Entry", "Ledger", "Trial Balance"],
-  "REPORTS": ["GST Reports", "P&L Statement", "Balance Sheet"],
   "MASTERS": ["Parties", "Chart of Accounts"],
   "HR & EMPLOYEES": ["Directory", "Attendance", "Salary Report", "Face Attendance", "Register Face"],
   "SYSTEM": ["Notifications", "Activity Logs", "Subscriptions", "Settings", "Zoho Integration", "System Reset"]
