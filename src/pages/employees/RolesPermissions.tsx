@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const SECTION_MAPPING: Record<string, string[]> = {
   "DASHBOARDS": ["Executive & Activities", "Sales Analytics", "Shipment Analytics", "Financial Overview", "Employee Productivity", "Roles & Permissions"],
-  "FARMERS": ["Farmers List", "Create Farmer"],
+  "FARMERS": ["Farmers List", "Create Farmer", "Convert to Customer"],
   "CRM": ["Dashboard", "Leads", "Pipelines", "Follow-Ups", "Communication", "Client Acquisition", "Successful Conversation", "Client Success", "Customer Database", "Task", "Report", "Mail Box"],
   "REVENUE & PERFORMANCE ANALYTICS": ["Performance", "Revenue Analytics"],
   "MOBILE CRM": ["Mobile Login", "Push Notifications", "Call Logging", "GPS Tracking", "IP Tracking", "Device Authorization"],

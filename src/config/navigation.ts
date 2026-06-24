@@ -51,7 +51,8 @@ export const navGroups: NavGroup[] = [
     icon: Users,
     items: [
       { title: "Create Farmer", url: "/farmers/create", icon: UserPlus, permission: "farmers.create" },
-      { title: "Farmers List", url: "/farmers", icon: Users, permission: "farmers.view" }
+      { title: "Farmers List", url: "/farmers", icon: Users, permission: "farmers.view" },
+      { title: "Convert to Customer", url: "/farmers/convert", icon: UserCheck, permission: "farmers.manage" }
     ]
   },
   {
