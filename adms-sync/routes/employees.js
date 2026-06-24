@@ -342,9 +342,24 @@ router.post('/:id/reset-password', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Safety check: Only shastikaglobal11@gmail.com is authorized
-    if (req.user.email !== 'shastikaglobal11@gmail.com') {
-      return res.status(403).json({ error: 'Unauthorized: Only shastikaglobal11@gmail.com is authorized to reset passwords.' });
+    // Safety check: Only shastikaglobal11@gmail.com or users with the 'admin' or 'manager' role are authorized
+    let isAuthorized = req.user.email === 'shastikaglobal11@gmail.com';
+    if (!isAuthorized) {
+      const { data: requesterProfile } = await supabase
+        .from('profiles')
+        .select('role, email')
+        .eq('id', req.user.sub || req.user.id)
+        .maybeSingle();
+      
+      isAuthorized = requesterProfile && (
+        requesterProfile.email === 'shastikaglobal11@gmail.com' ||
+        requesterProfile.role === 'admin' ||
+        requesterProfile.role === 'manager'
+      );
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({ error: 'Unauthorized: Only administrators are authorized to trigger password resets.' });
     }
 
     // 1. Fetch employee profile details

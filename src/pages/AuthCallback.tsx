@@ -26,12 +26,21 @@ export default function AuthCallback() {
         if (error) {
           setErrorMsg(error.message);
         } else {
-          // Navigation happens when session updates from useAuth, but we can force it here just in case
-          navigate("/employees/face-attendance?mode=checkin", { replace: true });
+          const isRecovery = window.location.hash.includes("type=recovery") || searchParams.get("type") === "recovery";
+          if (isRecovery) {
+            navigate("/auth?mode=reset", { replace: true });
+          } else {
+            navigate("/employees/face-attendance?mode=checkin", { replace: true });
+          }
         }
       });
     } else if (session) {
-      navigate("/employees/face-attendance?mode=checkin", { replace: true });
+      const isRecovery = window.location.hash.includes("type=recovery") || searchParams.get("type") === "recovery";
+      if (isRecovery) {
+        navigate("/auth?mode=reset", { replace: true });
+      } else {
+        navigate("/employees/face-attendance?mode=checkin", { replace: true });
+      }
     }
   }, [session, navigate, searchParams]);
 

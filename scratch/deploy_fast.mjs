@@ -14,7 +14,7 @@ const VPS_PASSWORD = 'SHASTIKARAM@2026';
 const REMOTE_FRONTEND = '/var/www/shastika-erp';
 const REMOTE_BACKEND = '/var/www/adms-sync';
 
-const LOCAL_ROOT = __dirname;
+const LOCAL_ROOT = path.resolve(__dirname, '..');
 const LOCAL_BACKEND = path.join(LOCAL_ROOT, 'adms-sync');
 const LOCAL_DIST = path.join(LOCAL_ROOT, 'dist');
 
@@ -59,46 +59,92 @@ function runCommand(conn, cmd, label = '') {
   });
 }
 
-async function uploadDir(sftp, localDir, remoteDir, skip = []) {
-  try {
-    await new Promise((resolve) => {
-      sftp.mkdir(remoteDir, () => resolve());
-    });
-  } catch (e) {}
-
-  const items = fs.readdirSync(localDir);
+// Concurrency helper
+async function mapLimit(items, limit, fn) {
+  const results = [];
+  const executing = new Set();
   for (const item of items) {
-    if (skip.includes(item)) continue;
-    const localPath = path.join(localDir, item);
-    const remotePath = `${remoteDir}/${item}`;
-    const stat = fs.statSync(localPath);
-    if (stat.isDirectory()) {
-      await uploadDir(sftp, localPath, remotePath, skip);
-    } else {
-      console.log(`   📤 Uploading ${item} -> ${remotePath}...`);
-      await new Promise((resolve, reject) => {
-        sftp.fastPut(localPath, remotePath, (err) => {
-          if (err) {
-            console.error(`❌ Failed to upload ${localPath} to ${remotePath}:`, err);
-            reject(err);
-          } else {
-            resolve();
-          }
-        });
-      });
+    const p = Promise.resolve().then(() => fn(item));
+    results.push(p);
+    executing.add(p);
+    const clean = () => executing.delete(p);
+    p.then(clean, clean);
+    if (executing.size >= limit) {
+      await Promise.race(executing);
     }
   }
+  return Promise.all(results);
+}
+
+// SFTP directory creator helper
+async function ensureRemoteDir(sftp, remoteDir) {
+  const parts = remoteDir.split('/');
+  let current = '';
+  for (const part of parts) {
+    if (!part) continue;
+    current += '/' + part;
+    try {
+      await new Promise((resolve) => {
+        sftp.mkdir(current, () => resolve());
+      });
+    } catch (e) {}
+  }
+}
+
+// Recursively gather all local files
+function getFilesRecursive(dir, skip = []) {
+  let results = [];
+  const list = fs.readdirSync(dir);
+  for (const file of list) {
+    if (skip.includes(file)) continue;
+    const filePath = path.join(dir, file);
+    const stat = fs.statSync(filePath);
+    if (stat.isDirectory()) {
+      results = results.concat(getFilesRecursive(filePath, skip));
+    } else {
+      results.push(filePath);
+    }
+  }
+  return results;
+}
+
+async function uploadFilesParallel(sftp, files, localBase, remoteBase, concurrency = 15) {
+  let uploadedCount = 0;
+  
+  await mapLimit(files, concurrency, async (localPath) => {
+    const relative = path.relative(localBase, localPath).replace(/\\/g, '/');
+    const remotePath = `${remoteBase}/${relative}`;
+    const remoteDir = path.dirname(remotePath).replace(/\\/g, '/');
+    
+    // Ensure remote directory exists
+    await ensureRemoteDir(sftp, remoteDir);
+    
+    // Upload file
+    await new Promise((resolve, reject) => {
+      sftp.fastPut(localPath, remotePath, (err) => {
+        if (err) {
+          console.error(`❌ Failed to upload ${relative}:`, err.message);
+          reject(err);
+        } else {
+          uploadedCount++;
+          if (uploadedCount % 20 === 0 || uploadedCount === files.length) {
+            console.log(`      Uploaded ${uploadedCount}/${files.length} files...`);
+          }
+          resolve();
+        }
+      });
+    });
+  });
 }
 
 async function main() {
   console.log('='.repeat(60));
-  console.log('🚀 Shastika Global Impex — Node-based VPS Deployer');
+  console.log('🚀 Fast Parallel VPS Deployer');
   console.log('='.repeat(60));
 
   const localEnv = loadLocalEnv();
-  
   const conn = new Client();
-  
+
   conn.on('ready', async () => {
     console.log('📡 SSH Connected to VPS!');
     
@@ -109,7 +155,6 @@ async function main() {
       const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
       const backupCmd = `PGPASSWORD="Shastika2026" pg_dump -h localhost -U postgres shastika_erp > /var/backups/shastika-erp/backup_${timestamp}.sql`;
       await runCommand(conn, backupCmd, `Executing pg_dump shastika_erp to backup_${timestamp}.sql`);
-      // Keep only last 7 backups
       await runCommand(conn, 'ls -1t /var/backups/shastika-erp/backup_*.sql | tail -n +8 | xargs -r rm --', 'Pruning old backups');
 
       // Open SFTP
@@ -121,20 +166,26 @@ async function main() {
       });
 
       // 2. Upload Frontend
-      console.log('\n📤 STEP 2 - Uploading Frontend Build');
+      console.log('\n📤 STEP 2 - Uploading Frontend Build (Parallel)');
       await runCommand(conn, `mkdir -p ${REMOTE_FRONTEND}`, 'Creating frontend remote directory');
-      await runCommand(conn, `rm -rf ${REMOTE_FRONTEND}/*`, 'Clearing old frontend files');
-      console.log('   Uploading local dist/ to VPS...');
-      await uploadDir(sftp, LOCAL_DIST, REMOTE_FRONTEND);
-      console.log('   ✅ Frontend files uploaded!');
+      await runCommand(conn, `rm -rf ${REMOTE_FRONTEND}/*`, 'Clearing remote frontend files');
+      
+      console.log('   Gathering frontend files...');
+      const frontendFiles = getFilesRecursive(LOCAL_DIST);
+      console.log(`   Found ${frontendFiles.length} files. Uploading with concurrency = 15...`);
+      await uploadFilesParallel(sftp, frontendFiles, LOCAL_DIST, REMOTE_FRONTEND, 15);
+      console.log('   ✅ Frontend files successfully uploaded!');
 
       // 3. Upload Backend
-      console.log('\n📤 STEP 3 - Uploading Backend (adms-sync)');
+      console.log('\n📤 STEP 3 - Uploading Backend (Parallel)');
       await runCommand(conn, `mkdir -p ${REMOTE_BACKEND}`, 'Creating backend remote directory');
-      console.log('   Uploading local adms-sync/ to VPS...');
+      
+      console.log('   Gathering backend files...');
       const skipBackend = ['.env', 'node_modules', '__pycache__', '.git', '.idea', '.vscode', 'deploy.py', 'deploy_all.py'];
-      await uploadDir(sftp, LOCAL_BACKEND, REMOTE_BACKEND, skipBackend);
-      console.log('   ✅ Backend files uploaded!');
+      const backendFiles = getFilesRecursive(LOCAL_BACKEND, skipBackend);
+      console.log(`   Found ${backendFiles.length} files. Uploading...`);
+      await uploadFilesParallel(sftp, backendFiles, LOCAL_BACKEND, REMOTE_BACKEND, 15);
+      console.log('   ✅ Backend files successfully uploaded!');
 
       // 4. Construct and Upload .env
       console.log('\n📤 STEP 4 - Generating and Uploading Remote .env');
@@ -169,48 +220,22 @@ async function main() {
       // 5. Install Deps & PM2 restart
       console.log('\n⚙️ STEP 5 - Installing Dependencies & Restarting Backend');
       await runCommand(conn, `cd ${REMOTE_BACKEND} && npm install`, 'npm install on VPS');
-      await runCommand(conn, `npm install -g pm2`, 'Ensure pm2 is installed globally');
       await runCommand(conn, `cd ${REMOTE_BACKEND} && (pm2 restart adms-sync || pm2 start server.js --name adms-sync)`, 'Restarting backend process on PM2');
       await runCommand(conn, 'pm2 save', 'Saving PM2 status');
 
-      // 6. Nginx Config Check
+      // 6. Nginx Config Check and Reload
       console.log('\n🌐 STEP 6 - Reloading Nginx');
-      const nginxCheck = await runCommand(conn, "grep -q 'root /var/www/shastika-erp' /etc/nginx/sites-available/default");
-      if (nginxCheck !== 0) {
-        console.log('   ⚠️ Nginx root does not point to shastika-erp. Fetching configuration...');
-        const nginxConf = await new Promise((resolve, reject) => {
-          sftp.readFile('/etc/nginx/sites-available/default', 'utf-8', (err, data) => {
-            if (err) reject(err);
-            else resolve(data);
-          });
-        });
-        const updatedConf = nginxConf.replace(/root\s+[^;]+;/, `root ${REMOTE_FRONTEND};`);
-        await new Promise((resolve, reject) => {
-          const stream = sftp.createWriteStream('/etc/nginx/sites-available/default');
-          stream.on('finish', () => resolve());
-          stream.on('error', (err) => reject(err));
-          stream.write(updatedConf);
-          stream.end();
-        });
-        console.log('   ✅ Nginx root updated in config.');
-      }
       await runCommand(conn, 'nginx -t && systemctl reload nginx', 'Nginx configuration reload');
 
-      // 7. DB Health Check
-      console.log('\n🗄️ STEP 7 - Database Health Check');
-      await runCommand(conn, 'pg_isready -h localhost -p 5432 -U postgres -d shastika_erp', 'pg_isready check');
-
       console.log('\n' + '='.repeat(60));
-      console.log('🎉 DEPLOYMENT COMPLETE!');
+      console.log('🎉 FAST DEPLOYMENT COMPLETE!');
       console.log('🌐 Site:    https://erp.shastikaglobalexport.co.in');
-      console.log('🔧 API:     https://erp.shastikaglobalexport.co.in/api/');
-      console.log('🗄️  DB:      PostgreSQL @ 195.35.22.13 (shastika_erp)');
       console.log('='.repeat(60));
 
       sftp.end();
       conn.end();
     } catch (err) {
-      console.error('\n❌ Deployment failed during execution:', err);
+      console.error('\n❌ Fast deployment failed during execution:', err);
       conn.end();
     }
   });

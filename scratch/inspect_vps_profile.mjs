@@ -12,8 +12,8 @@ const pool = new Pool({
 });
 
 async function main() {
-  const res = await pool.query("SELECT * FROM companies WHERE id = '00000000-0000-0000-0000-00000000ae01'");
-  console.log("Company details:", res.rows);
+  const res = await pool.query("SELECT * FROM profiles WHERE id = '59df2897-02e4-4ab3-80ba-dc016642ba04'");
+  console.log("Profile details in VPS DB:", res.rows);
   await pool.end();
 }
 

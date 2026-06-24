@@ -203,7 +203,7 @@ def main():
     print("=" * 60)
 
     cmds = [
-        (f"cd {REMOTE_BACKEND} && npm install express dotenv @supabase/supabase-js ws pg cors jsonwebtoken node-cron", "npm install"),
+        (f"cd {REMOTE_BACKEND} && npm install", "npm install"),
         (f"npm install -g pm2", "Ensure pm2 is installed"),
         (f"cd {REMOTE_BACKEND} && pm2 restart adms-sync || pm2 start server.js --name adms-sync", "Restart pm2 adms-sync"),
         ("pm2 save", "Save pm2 process list"),

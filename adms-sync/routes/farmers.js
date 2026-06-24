@@ -19,9 +19,15 @@ const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
 // GET /api/farmers
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const { company_id } = req.query;
+    let { company_id } = req.query;
     if (!company_id) {
-      return res.status(400).json({ error: 'company_id is required' });
+      const userRes = await db.query('SELECT company_id FROM profiles WHERE id = $1 LIMIT 1', [req.user.sub]);
+      if (userRes.rows.length > 0 && userRes.rows[0].company_id) {
+        company_id = userRes.rows[0].company_id;
+      } else {
+        company_id = '00000000-0000-0000-0000-00000000ae01';
+      }
+      console.log(`[GET /api/farmers] company_id was missing, resolved to: ${company_id}`);
     }
 
     if (supabase) {
@@ -116,10 +122,20 @@ router.get('/', requireAuth, async (req, res) => {
 // POST /api/farmers
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const { company_id, full_name, email, phone, country, district, primary_crops, is_active } = req.body;
+    let { company_id, full_name, email, phone, country, district, primary_crops, is_active } = req.body;
     
-    if (!company_id || !full_name) {
-      return res.status(400).json({ error: 'company_id and full_name are required' });
+    if (!company_id) {
+      const userRes = await db.query('SELECT company_id FROM profiles WHERE id = $1 LIMIT 1', [req.user.sub]);
+      if (userRes.rows.length > 0 && userRes.rows[0].company_id) {
+        company_id = userRes.rows[0].company_id;
+      } else {
+        company_id = '00000000-0000-0000-0000-00000000ae01';
+      }
+      console.log(`[POST /api/farmers] company_id was missing, resolved to: ${company_id}`);
+    }
+
+    if (!full_name) {
+      return res.status(400).json({ error: 'full_name is required' });
     }
 
     const { rows } = await db.query(
@@ -128,7 +144,44 @@ router.post('/', requireAuth, async (req, res) => {
       [company_id, full_name, email, phone, country, district, primary_crops, is_active ?? true]
     );
 
-    res.status(201).json(rows[0]);
+    const newFarmer = rows[0];
+
+    if (supabase) {
+      try {
+        console.log(`[Sync] Inserting new farmer to Supabase: ${newFarmer.id}`);
+        const { error: sbError } = await supabase
+          .from('farmers')
+          .insert([{
+            id: newFarmer.id,
+            company_id: newFarmer.company_id,
+            code: newFarmer.code || null,
+            full_name: newFarmer.full_name,
+            email: newFarmer.email || null,
+            phone: newFarmer.phone || null,
+            village: newFarmer.village || null,
+            district: newFarmer.district || null,
+            state: newFarmer.state || null,
+            country: newFarmer.country || null,
+            primary_crops: newFarmer.primary_crops || null,
+            bank_account: newFarmer.bank_account || null,
+            notes: newFarmer.notes || null,
+            is_active: newFarmer.is_active ?? true,
+            is_deleted: newFarmer.is_deleted ?? false,
+            created_at: newFarmer.created_at,
+            updated_at: newFarmer.updated_at
+          }]);
+
+        if (sbError) {
+          console.error('[Sync] Failed to sync new farmer to Supabase:', sbError.message);
+        } else {
+          console.log('[Sync] Successfully synced new farmer to Supabase');
+        }
+      } catch (syncErr) {
+        console.error('[Sync] Exception during farmer insert sync to Supabase:', syncErr.message);
+      }
+    }
+
+    res.status(201).json(newFarmer);
   } catch (err) {
     console.error('DB Error (create farmer):', err);
     res.status(500).json({ error: err.message || 'Internal Server Error' });
@@ -138,9 +191,15 @@ router.post('/', requireAuth, async (req, res) => {
 // GET /api/farmers/converted
 router.get('/converted', requireAuth, async (req, res) => {
   try {
-    const { company_id } = req.query;
+    let { company_id } = req.query;
     if (!company_id) {
-      return res.status(400).json({ error: 'company_id is required' });
+      const userRes = await db.query('SELECT company_id FROM profiles WHERE id = $1 LIMIT 1', [req.user.sub]);
+      if (userRes.rows.length > 0 && userRes.rows[0].company_id) {
+        company_id = userRes.rows[0].company_id;
+      } else {
+        company_id = '00000000-0000-0000-0000-00000000ae01';
+      }
+      console.log(`[GET /api/farmers/converted] company_id was missing, resolved to: ${company_id}`);
     }
     const { rows } = await db.query(
       `SELECT f.id FROM farmers f 
@@ -194,7 +253,8 @@ router.put('/:id', requireAuth, async (req, res) => {
         bank_account = COALESCE($9, bank_account),
         state = COALESCE($10, state),
         village = COALESCE($11, village),
-        code = COALESCE($12, code)
+        code = COALESCE($12, code),
+        updated_at = NOW()
        WHERE id = $13 RETURNING *`,
       [full_name, email, phone, country, district, primary_crops, is_active, notes, bank_account, state, village, code, id]
     );
@@ -203,7 +263,41 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Farmer not found' });
     }
 
-    res.json(rows[0]);
+    const updatedFarmer = rows[0];
+
+    if (supabase) {
+      try {
+        console.log(`[Sync] Updating farmer in Supabase: ${id}`);
+        const { error: sbError } = await supabase
+          .from('farmers')
+          .update({
+            code: updatedFarmer.code,
+            full_name: updatedFarmer.full_name,
+            email: updatedFarmer.email,
+            phone: updatedFarmer.phone,
+            village: updatedFarmer.village,
+            district: updatedFarmer.district,
+            state: updatedFarmer.state,
+            country: updatedFarmer.country,
+            primary_crops: updatedFarmer.primary_crops,
+            bank_account: updatedFarmer.bank_account,
+            notes: updatedFarmer.notes,
+            is_active: updatedFarmer.is_active,
+            updated_at: updatedFarmer.updated_at
+          })
+          .eq('id', id);
+
+        if (sbError) {
+          console.error('[Sync] Failed to sync updated farmer to Supabase:', sbError.message);
+        } else {
+          console.log('[Sync] Successfully synced updated farmer to Supabase');
+        }
+      } catch (syncErr) {
+        console.error('[Sync] Exception during farmer update sync to Supabase:', syncErr.message);
+      }
+    }
+
+    res.json(updatedFarmer);
   } catch (err) {
     console.error('DB Error (update farmer):', err);
     res.status(500).json({ error: err.message || 'Internal Server Error' });
@@ -220,6 +314,29 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Farmer not found' });
+    }
+
+    if (supabase) {
+      try {
+        console.log(`[Sync] Soft-deleting farmer in Supabase: ${req.params.id}`);
+        const { error: sbError } = await supabase
+          .from('farmers')
+          .update({
+            is_deleted: true,
+            is_active: false,
+            deleted_at: new Date().toISOString(),
+            deleted_by: req.user?.id || null
+          })
+          .eq('id', req.params.id);
+
+        if (sbError) {
+          console.error('[Sync] Failed to sync deleted farmer to Supabase:', sbError.message);
+        } else {
+          console.log('[Sync] Successfully synced deleted farmer to Supabase');
+        }
+      } catch (syncErr) {
+        console.error('[Sync] Exception during farmer delete sync to Supabase:', syncErr.message);
+      }
     }
 
     res.json({ success: true });
