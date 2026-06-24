@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,6 +8,8 @@ import { Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface Farmer {
   id: string;
@@ -27,14 +29,41 @@ interface Farmer {
 
 export default function ConvertToCustomer() {
   const { profile, session } = useAuth();
-  const [farmers, setFarmers] = useState<Farmer[]>([]);
-  const [loading, setLoading] = useState(false);
+  const qc = useQueryClient();
   const [convertingIds, setConvertingIds] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const selectedId = searchParams.get("id");
-
   const [statusFilter, setStatusFilter] = useState("all");
+
+  // ── Fetch farmers directly from Supabase (same source as FarmersList) ──
+  const { data: farmers = [], isLoading } = useQuery({
+    queryKey: ["farmers-convert"],
+    queryFn: async () => {
+      // 1. Get all non-deleted farmers
+      const { data: farmersData, error: farmersError } = await supabase
+        .from("farmers")
+        .select("id, code, full_name, phone, email, village, district, state, country, primary_crops, notes, is_active")
+        .neq("is_deleted", true)
+        .order("created_at", { ascending: false });
+
+      if (farmersError) throw farmersError;
+      if (!farmersData || farmersData.length === 0) return [] as Farmer[];
+
+      // 2. Get IDs of already-converted farmers (those that have a customers row)
+      const { data: convertedData } = await supabase
+        .from("customers")
+        .select("farmer_id")
+        .not("farmer_id", "is", null);
+
+      const convertedIds = new Set((convertedData || []).map((c: { farmer_id: string }) => c.farmer_id));
+
+      return farmersData.map((f) => ({
+        ...f,
+        conversion_status: convertedIds.has(f.id) ? ("converted" as const) : ("active" as const),
+      })) as Farmer[];
+    },
+    enabled: !!profile?.company_id,
+  });
 
   const selectedFarmer = useMemo(
     () => farmers.find((farmer) => farmer.id === selectedId) || null,
@@ -46,64 +75,38 @@ export default function ConvertToCustomer() {
   const filteredFarmers = useMemo(() => {
     return displayFarmers.filter((farmer) => {
       const isConverted = farmer.conversion_status === "converted";
-      if (statusFilter === "active") {
-        return farmer.is_active && !isConverted;
-      }
-      if (statusFilter === "inactive") {
-        return !farmer.is_active && !isConverted;
-      }
-      if (statusFilter === "converted") {
-        return isConverted;
-      }
+      if (statusFilter === "active") return farmer.is_active && !isConverted;
+      if (statusFilter === "inactive") return !farmer.is_active && !isConverted;
+      if (statusFilter === "converted") return isConverted;
       return true;
     });
   }, [displayFarmers, statusFilter]);
 
-  const fetchFarmers = async () => {
-    if (!profile?.company_id || !session?.access_token) return;
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL || ""}/api/farmers?company_id=${profile.company_id}`,
-        { headers: { Authorization: `Bearer ${session.access_token}` } }
-      );
-      if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
-      setFarmers(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Failed to fetch farmers:", err);
-      setError("Failed to load farmers. Please refresh.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchFarmers();
-  }, [profile?.company_id, session?.access_token]);
-
   const handleConvert = async (farmerId: string) => {
     const farmer = farmers.find((f) => f.id === farmerId);
-    setConvertingIds(prev => new Set(prev).add(farmerId));
+    setConvertingIds((prev) => new Set(prev).add(farmerId));
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/farmers/${farmerId}/convert`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({ company_id: profile?.company_id })
-      });
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL || ""}/api/farmers/${farmerId}/convert`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ company_id: profile?.company_id }),
+        }
+      );
 
       if (!res.ok) throw new Error("Conversion failed");
 
-      await fetchFarmers(); // Refresh farmer data to update conversion status
+      await qc.invalidateQueries({ queryKey: ["farmers-convert"] });
       toast.success(`${farmer?.full_name || "Farmer"} converted to customer successfully!`);
     } catch (err) {
       console.error(err);
       toast.error("Failed to convert farmer. Please try again.");
     } finally {
-      setConvertingIds(prev => {
+      setConvertingIds((prev) => {
         const next = new Set(prev);
         next.delete(farmerId);
         return next;
@@ -112,12 +115,48 @@ export default function ConvertToCustomer() {
   };
 
   const columns = [
-    { key: "code", header: "Code", render: (r: Farmer) => <span className="font-mono text-xs text-muted-foreground">{r.code || "—"}</span> },
-    { key: "full_name", header: "Farmer Name", render: (r: Farmer) => <span className="font-medium">{r.full_name}</span> },
-    { key: "phone", header: "Phone", render: (r: Farmer) => <span className="text-sm text-muted-foreground">{r.phone || "—"}</span> },
-    { key: "loc", header: "Location", render: (r: Farmer) => <span className="text-sm">{[r.village, r.district, r.state].filter(Boolean).join(", ") || "—"}</span> },
-    { key: "crops", header: "Crops", render: (r: Farmer) => <span className="text-xs text-muted-foreground">{(r.primary_crops || []).join(", ") || "—"}</span> },
-    { key: "status", header: "Status", render: (r: Farmer) => <StatusBadge status={r.is_active ? "Active" : "Inactive"} /> },
+    {
+      key: "code",
+      header: "Code",
+      render: (r: Farmer) => (
+        <span className="font-mono text-xs text-muted-foreground">{r.code || "—"}</span>
+      ),
+    },
+    {
+      key: "full_name",
+      header: "Farmer Name",
+      render: (r: Farmer) => <span className="font-medium">{r.full_name}</span>,
+    },
+    {
+      key: "phone",
+      header: "Phone",
+      render: (r: Farmer) => (
+        <span className="text-sm text-muted-foreground">{r.phone || "—"}</span>
+      ),
+    },
+    {
+      key: "loc",
+      header: "Location",
+      render: (r: Farmer) => (
+        <span className="text-sm">
+          {[r.village, r.district, r.state].filter(Boolean).join(", ") || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "crops",
+      header: "Crops",
+      render: (r: Farmer) => (
+        <span className="text-xs text-muted-foreground">
+          {(r.primary_crops || []).join(", ") || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (r: Farmer) => <StatusBadge status={r.is_active ? "Active" : "Inactive"} />,
+    },
     {
       key: "actions",
       header: "Action",
@@ -141,37 +180,30 @@ export default function ConvertToCustomer() {
         if (isConverting) {
           return (
             <Button size="sm" disabled>
+              <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
               Converting...
             </Button>
           );
         }
 
         return (
-          <Button
-            size="sm"
-            onClick={() => handleConvert(r.id)}
-          >
+          <Button size="sm" onClick={() => handleConvert(r.id)}>
             Convert
           </Button>
         );
-      }
-    }
+      },
+    },
   ];
 
   return (
     <div className="space-y-4">
       <PageHeader
         title="Convert Farmer to Customer"
-        description="Convert your farmer suppliers into official customers in the database"
+        description="Here you can convert farmers into customers."
         breadcrumbs={[{ label: "Farmers", to: "/farmers" }, { label: "Convert to Customer" }]}
       />
 
-      {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
-      {selectedId && !loading && !selectedFarmer && (
-        <div className="mb-4 text-sm text-muted-foreground">No farmer found for the selected conversion.</div>
-      )}
-
-      {loading ? (
+      {isLoading ? (
         <div className="erp-card flex items-center justify-center py-16">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
