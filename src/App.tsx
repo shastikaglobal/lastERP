@@ -58,7 +58,6 @@ const BdeDashboard = lazy(() => import("./pages/dashboards/BdeDashboard"));
 const FarmersList = lazy(() => import("./pages/farmers/FarmersList"));
 const CreateFarmer = lazy(() => import("./pages/farmers/CreateFarmer"));
 const FarmerDetail = lazy(() => import("./pages/farmers/FarmerDetail"));
-const ConvertToCustomer = lazy(() => import("./pages/farmers/ConvertToCustomer"));
 // Procurement (live)
 const PurchaseOrdersListLive = lazy(() => import("./pages/procurement/PurchaseOrdersListLive"));
 const PurchaseOrderDetailLive = lazy(() => import("./pages/procurement/PurchaseOrderDetailLive"));
@@ -234,7 +233,6 @@ const App = () => (
               {/* Farmers */}
               <Route path="/farmers" element={<FarmersList />} />
               <Route path="/farmers/create" element={<CreateFarmer />} />
-              <Route path="/farmers/convert" element={<ConvertToCustomer />} />
               <Route path="/farmers/:id" element={<FarmerDetail />} />
 
               {/* Procurement */}

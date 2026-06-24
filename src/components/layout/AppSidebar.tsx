@@ -193,7 +193,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
       // 2. BDE with no explicit permissions → show CRM group, and specific items in other groups
       if (hasBdeDefaults) {
         if (g.title === 'Farmers') {
-          return { ...g, items: g.items.filter(i => ['Farmers List', 'Convert to Customer'].includes(i.title)) };
+          return { ...g, items: g.items.filter(i => ['Farmers List'].includes(i.title)) };
         }
         if (g.title === 'Warehouse & Inventory') {
           return {
