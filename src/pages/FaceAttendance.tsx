@@ -232,26 +232,31 @@ export default function FaceAttendance() {
       if (!isMounted.current) return;
       
       // Map names from employeesList to embeddings and summary
+      const wfhEmployees = employeesList ? employeesList.filter(e => e.system_mode === 'wfh') : [];
+      const wfhEmpIds = new Set(wfhEmployees.map(e => e.id));
+      
       const empMap = {};
-      if (employeesList) {
-        employeesList.forEach(e => { empMap[e.id] = e; });
-      }
+      wfhEmployees.forEach(e => { empMap[e.id] = e; });
 
-      const enrichedEmbeddings = embeddings.map(emb => {
-        if (!emb.employees || !emb.employees.full_name) {
-          emb.employees = emb.employees || {};
-          emb.employees.full_name = empMap[emb.employee_id]?.full_name || 'Employee';
-          emb.employees.department = empMap[emb.employee_id]?.department || '';
-        }
-        return emb;
-      });
+      const enrichedEmbeddings = embeddings
+        .filter(emb => wfhEmpIds.has(emb.employee_id))
+        .map(emb => {
+          if (!emb.employees || !emb.employees.full_name) {
+            emb.employees = emb.employees || {};
+            emb.employees.full_name = empMap[emb.employee_id]?.full_name || 'Employee';
+            emb.employees.department = empMap[emb.employee_id]?.department || '';
+          }
+          return emb;
+        });
 
-      const enrichedSummary = summary.map(r => {
-        if (!r.name && !r.full_name) {
-          r.name = empMap[r.employee_id]?.full_name || r.name;
-        }
-        return r;
-      });
+      const enrichedSummary = summary
+        .filter(r => wfhEmpIds.has(r.employee_id))
+        .map(r => {
+          if (!r.name && !r.full_name) {
+            r.name = empMap[r.employee_id]?.full_name || r.name;
+          }
+          return r;
+        });
 
       setStoredEmbeddings(enrichedEmbeddings);
       setTodaySummary(enrichedSummary);
@@ -369,16 +374,19 @@ export default function FaceAttendance() {
       // Fetch summary and enrich with employee names
       const summary = await fetchTodaySummaryFromVPS();
       const employeesList = await getAllEmployees();
+      const wfhEmployees = employeesList ? employeesList.filter(e => e.system_mode === 'wfh') : [];
+      const wfhEmpIds = new Set(wfhEmployees.map(e => e.id));
       const empMap = {};
-      if (employeesList) {
-        employeesList.forEach(e => { empMap[e.id] = e; });
-      }
-      const enrichedSummary = summary.map(r => {
-        if (!r.name && !r.full_name) {
-          r.name = empMap[r.employee_id]?.full_name || r.name;
-        }
-        return r;
-      });
+      wfhEmployees.forEach(e => { empMap[e.id] = e; });
+
+      const enrichedSummary = summary
+        .filter(r => wfhEmpIds.has(r.employee_id))
+        .map(r => {
+          if (!r.name && !r.full_name) {
+            r.name = empMap[r.employee_id]?.full_name || r.name;
+          }
+          return r;
+        });
 
       if (isMounted.current) {
         setTodaySummary(enrichedSummary);

@@ -7,9 +7,11 @@ import { DataTable } from "@/components/shared/DataTable";
 import { Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 
 interface Farmer {
   id: string;
+  code: string | null;
   full_name: string;
   phone: string | null;
   email: string | null;
@@ -17,6 +19,7 @@ interface Farmer {
   district: string | null;
   state: string | null;
   country: string | null;
+  primary_crops: string[] | null;
   notes: string | null;
   is_active: boolean;
   conversion_status: "converted" | "active";
@@ -109,21 +112,12 @@ export default function ConvertToCustomer() {
   };
 
   const columns = [
-    { key: "full_name", header: "Farmer", render: (r: Farmer) => <span className="font-medium">{r.full_name}</span> },
+    { key: "code", header: "Code", render: (r: Farmer) => <span className="font-mono text-xs text-muted-foreground">{r.code || "—"}</span> },
+    { key: "full_name", header: "Farmer Name", render: (r: Farmer) => <span className="font-medium">{r.full_name}</span> },
     { key: "phone", header: "Phone", render: (r: Farmer) => <span className="text-sm text-muted-foreground">{r.phone || "—"}</span> },
     { key: "loc", header: "Location", render: (r: Farmer) => <span className="text-sm">{[r.village, r.district, r.state].filter(Boolean).join(", ") || "—"}</span> },
-    {
-      key: "status",
-      header: "Status",
-      render: (r: Farmer) => {
-        const isConverted = r.conversion_status === "converted";
-        return isConverted ? (
-          <span className="text-green-600 font-semibold">Converted</span>
-        ) : (
-          <span className="text-orange-600 font-semibold">Active Farmer</span>
-        );
-      }
-    },
+    { key: "crops", header: "Crops", render: (r: Farmer) => <span className="text-xs text-muted-foreground">{(r.primary_crops || []).join(", ") || "—"}</span> },
+    { key: "status", header: "Status", render: (r: Farmer) => <StatusBadge status={r.is_active ? "Active" : "Inactive"} /> },
     {
       key: "actions",
       header: "Action",
@@ -184,7 +178,7 @@ export default function ConvertToCustomer() {
       ) : (
         <DataTable
           data={filteredFarmers}
-          searchKeys={["full_name", "phone", "village", "district"]}
+          searchKeys={["full_name", "code", "phone", "village", "district"]}
           toolbar={
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground font-medium mr-1">Status:</span>
