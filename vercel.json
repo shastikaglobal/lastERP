@@ -6,7 +6,7 @@
       "destination": "https://shastikaglobalexport.co.in/api/:path*"
     },
     {
-      "source": "/((?!assets|favicon.ico|logo.png|.*\\.).*)",
+      "source": "/:path*",
       "destination": "/index.html"
     }
   ]
