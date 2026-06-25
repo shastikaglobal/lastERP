@@ -337,6 +337,21 @@ router.get('/:id/bio-data', requireAuth, async (req, res) => {
   }
 });
 
+// DELETE /api/employees/:id/bio-data - Delete face embeddings for an employee from VPS DB
+router.delete('/:id/bio-data', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.query(
+      'DELETE FROM face_embeddings WHERE employee_id::text = $1',
+      [id]
+    );
+    res.json({ success: true, message: 'Face embeddings deleted successfully' });
+  } catch (err) {
+    console.error('DELETE /api/employees/:id/bio-data error:', err.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 // POST /api/employees/:id/reset-password - Generate password reset link and send to shastikaglobal11@gmail.com
 router.post('/:id/reset-password', requireAuth, async (req, res) => {
   try {

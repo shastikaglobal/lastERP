@@ -32,8 +32,10 @@ export async function getEmployees() {
 
 export async function getAllEmployees() {
     const { data, error } = await supabase
-        .from('employees')
+        .from('profiles')
         .select('*')
+        .eq('status', 'approved')
+        .eq('is_deleted', false)
         .order('full_name');
     if (error) throw error;
     return data;

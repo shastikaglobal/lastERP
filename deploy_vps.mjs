@@ -2,6 +2,7 @@ import { Client } from 'ssh2';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -121,12 +122,39 @@ async function main() {
       });
 
       // 2. Upload Frontend
-      console.log('\n📤 STEP 2 - Uploading Frontend Build');
+      console.log('\n📤 STEP 2 - Packaging and Uploading Frontend Build');
+      try {
+        console.log('   Creating local dist.tar.gz archive...');
+        execSync('tar -czf dist.tar.gz -C dist .', { cwd: LOCAL_ROOT });
+        console.log('   Tar archive created locally.');
+      } catch (err) {
+        console.error('❌ Failed to create tar archive locally:', err);
+        throw err;
+      }
+      
       await runCommand(conn, `mkdir -p ${REMOTE_FRONTEND}`, 'Creating frontend remote directory');
       await runCommand(conn, `rm -rf ${REMOTE_FRONTEND}/*`, 'Clearing old frontend files');
-      console.log('   Uploading local dist/ to VPS...');
-      await uploadDir(sftp, LOCAL_DIST, REMOTE_FRONTEND);
-      console.log('   ✅ Frontend files uploaded!');
+      
+      console.log('   Uploading dist.tar.gz to VPS...');
+      await new Promise((resolve, reject) => {
+        sftp.fastPut(path.join(LOCAL_ROOT, 'dist.tar.gz'), `${REMOTE_FRONTEND}/dist.tar.gz`, (err) => {
+          if (err) {
+            console.error('❌ SFTP fastPut error for dist.tar.gz:', err);
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
+      console.log('   Uploaded dist.tar.gz successfully.');
+      
+      await runCommand(conn, `tar -xzf ${REMOTE_FRONTEND}/dist.tar.gz -C ${REMOTE_FRONTEND}`, 'Extracting frontend files on VPS');
+      await runCommand(conn, `rm -f ${REMOTE_FRONTEND}/dist.tar.gz`, 'Removing remote tar archive');
+      
+      try {
+        fs.unlinkSync(path.join(LOCAL_ROOT, 'dist.tar.gz'));
+      } catch (e) {}
+      console.log('   ✅ Frontend build deployed and extracted!');
 
       // 3. Upload Backend
       console.log('\n📤 STEP 3 - Uploading Backend (adms-sync)');
